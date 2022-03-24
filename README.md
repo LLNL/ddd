@@ -31,9 +31,12 @@ Usage
    ~~~~
    xcode-select --install
    ~~~~
-   to update the command line tools required for installation.
+   to update the command line tools required for installation.  In addition, it may be necessary to run the following before compiling:
+   ~~~~
+   export LIBRARY_PATH="$LIBRARY_PATH:/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
+   ~~~~
 
-3. Copy the `.py` scripts and the `.sh` file into the DelaunaySparse python subfolder:
+3. Once DelaunaySparse is successfully installed, copy the `.py` scripts and the `.sh` file from the `ddd` repository into the `DelaunaySparse/python` subfolder:
     ~~~~
    cd [directory with DelaunaySparse repository]/DelaunaySparse/python
    cp [relevant path prefix]/ddd/*.py .
