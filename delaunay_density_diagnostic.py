@@ -6,13 +6,12 @@
 #   by Andrew Gillette and Eugene Kur
 #   Version 1.0, March 2022
 #
-# USAGE:
-#
+# For usage information, run:
+# python delaunay_density_diagnostic.py --help
 #
 ################################################################################
 
-# Usage:    python function_approx_exs.py
-# Output:   
+
 
 #==================================================================================================#
 # Load packages.  Set random state and validation split.
@@ -286,8 +285,7 @@ if __name__ == '__main__':
     # Provide help screen documentation. Let the user define options. Also define defaults.            #
     #==================================================================================================#
 
-    doc_string = "\nSpecify experiment type to use DelaunaySparse methods."
-    usage = doc_string + "\nUsage: %prog [options]"
+    usage = "%prog [options]"
     parser = OptionParser(usage)
     parser.add_option( "--jobid", help="Job ID.", 
         dest="jobid", type=int, default=999999)   
