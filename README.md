@@ -12,9 +12,9 @@ Usage
 ----------------
 
 1. Clone the DelaunaySparse repository:
-  ~~~~
-  git clone https://github.com/vtopt/DelaunaySparse.git
-  ~~~~
+   ~~~~
+   git clone https://github.com/vtopt/DelaunaySparse.git
+   ~~~~
 2. Install the DelaunaySparse software.  \
    The software may be able to self-install with the included python bindings.  Try:
    ~~~~
@@ -39,8 +39,8 @@ Usage
    cp [relevant path prefix]/ddd/*.py .
    cp [relevant path prefix]/ddd/*.sh .
    ~~~~
-4) Run the driver script:
-  ~~~~
+4. Run the driver script:
+   ~~~~
    ./run_ddd_trials.sh
    ~~~~
    The above script will run a total of 100 trials of the `delaunay_density_diagnostic.py` script,
@@ -48,7 +48,7 @@ Usage
       to generate a `.png` figure.  Details can be found in the header of  `run_ddd_trials.sh`.
 
 5. If the figure generates correctly, run
-  ~~~~
+   ~~~~
    python delaunay_density_diagnostic.py --help
    ~~~~
    to see the command line options that can be added to the driver script for
