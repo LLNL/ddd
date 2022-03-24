@@ -13,7 +13,7 @@ Usage
 
 1. Clone the DelaunaySparse repository:
   ~~~~
-  git clone https://github.com/vtopt/DelaunaySparse.git`
+  git clone https://github.com/vtopt/DelaunaySparse.git
   ~~~~
 2. Install the DelaunaySparse software.  \
    The software may be able to self-install with the included python bindings.  Try:
@@ -36,9 +36,8 @@ Usage
 3. Copy the `.py` scripts and the `.sh` file into the DelaunaySparse python subfolder:
     ~~~~
    cd [directory with DelaunaySparse repository]/DelaunaySparse/python
-   cp [relevant path prefix]/delauany_density_diagnostic.py .
-   cp [relevant path prefix]/generate_ddd_figures.py .
-   cp [relevant path prefix]/run_ddd_trials.sh
+   cp [relevant path prefix]/ddd/*.py .
+   cp [relevant path prefix]/ddd/*.sh .
    ~~~~
 4) Run the driver script:
   ~~~~
