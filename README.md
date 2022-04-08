@@ -35,13 +35,15 @@ Usage
    ~~~~
    export LIBRARY_PATH="$LIBRARY_PATH:/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
    ~~~~
+   Successful installation will include the creation of a shared object file `delsparse_clib.so` in the `DelaunaySparse/python` subfolder.
 
-3. Once DelaunaySparse is successfully installed, copy the `.py` scripts and the `.sh` file from the `ddd` repository into the `DelaunaySparse/python` subfolder:
+3. Once DelaunaySparse is successfully installed, copy `delsparse.py` and `delsparse_clib.so` from the `DelaunaySparse/python` subfolder into the `ddd` repository:
     ~~~~
-   cd [directory with DelaunaySparse repository]/DelaunaySparse/python
-   cp [relevant path prefix]/ddd/*.py .
-   cp [relevant path prefix]/ddd/*.sh .
+   cd [path to ddd repo]/ddd
+   cp [path to DelaunaySparse repo]/DelaunaySparse/python/delsparse.py .
+   cp [path to DelaunaySparse repo]/DelaunaySparse/python/delsparse_clib.so .
    ~~~~
+
 4. Run the driver script:
    ~~~~
    ./run_ddd_trials.sh
@@ -77,7 +79,20 @@ Andrew Gillette and Eugene Kur.  *Data-driven geometric scale detection via Dela
 }
 ~~~~
 
+If you wish to cite the code specifically, please use:
 
+~~~~
+@misc{ doecode_72093,
+title = {Delaunay density diagnostic},
+author = {Gillette, Andrew K.},
+url = {https://doi.org/10.11578/dc.20220324.3},
+howpublished = {[Computer Software] \url{https://doi.org/10.11578/dc.20220324.3}},
+year = {2022},
+month = {mar}
+}
+~~~~
+
+The DOI for this repository is:  https://doi.org/10.11578/dc.20220324.3
 
 
 License
