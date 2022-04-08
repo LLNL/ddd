@@ -309,8 +309,8 @@ if __name__ == '__main__':
         "Default=0.0.  Use 999.0 in zoomctr or zoomexp to manually specify left/right bounds (not implemented in Version 1.0).")
     parser.add_option("--zoomexp", dest="zoom_exp", type=float, default=1.0,
         help="Zoom modality: set query bounds and bounding box such that (1) center is (x,x,...,x) where x=zoomctr"+\
-        "(2) length of query grid is 2e[zoomexp] in each dimension and (3) bounding box determined from testbdsc."+\
-        "Default=0.0.  Use 999.0 in zoomctr or zoomexp to manually specify left/right bounds (not implemented in Version 1.0).")
+        " (2) length of query grid is 10e[zoomexp] in each dimension and (3) bounding box determined from testbdsc."+\
+        " Default=0.0.  Use 999.0 in zoomctr or zoomexp to manually specify left/right bounds (not implemented in Version 1.0).")
     parser.add_option("--queryleftbd", dest="queryleftbound", type=float, default=0.0,
         help="Left bound of interval used to build query point domain [a, b]^dim. Overwritten if zoom modality is used (see above). Default 0.0")
     parser.add_option("--queryrightbd", dest="queryrightbound", type=float, default=1.0,
