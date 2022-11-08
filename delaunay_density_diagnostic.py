@@ -288,7 +288,19 @@ if __name__ == '__main__':
     usage = "%prog [options]"
     parser = OptionParser(usage)
     parser.add_option( "--jobid", help="Job ID.", 
-        dest="jobid", type=int, default=999999)   
+        dest="jobid", type=int, default=999999)
+    parser.add_option("--staticdata", dest="infile", type=str, default=None,
+        help="Path to static dataset of input/output pairs.  See README for required formatting.  Setting this signals use of" +\
+            " modality to return gradient values and uncertainty quantification.")
+    parser.add_option("--seed", dest="spec_seed", type=int, default=0,
+        help="Value passed as global seed to random number generator.  Default 0.")
+    parser.add_option("--zoomexp", dest="zoom_exp", type=float, default=1.0,
+        help="Zoom modality: set query bounds and bounding box such that (1) center is (x,x,...,x) where x=zoomctr"+\
+        " (2) length of query grid is 10e[zoomexp] in each dimension and (3) bounding box determined from testbdsc."+\
+        " Default=0.0.  Use 999.0 in zoomctr or zoomexp to manually specify left/right bounds (not implemented in Version 1.0).")
+    parser.add_option("--zoomctr", dest="zoom_ctr", type=float, default=0.0,
+        help="Zoom modality: used only in conjunction with zoomexp option - see above. " +\
+        "Default=0.0.  Use 999.0 in zoomctr or zoomexp to manually specify left/right bounds (not implemented in Version 1.0).")
     parser.add_option( "--fn", help="Test function to use.  Version 1.0 of the code only supports the Griewank function.  " +
         "It is possible to code in additional functions by modifying the definition of tf(X).", 
         dest="fn_name", type=str, default="griewank")  
@@ -304,13 +316,6 @@ if __name__ == '__main__':
         help="Number of test points per dimension. Default = 20.")
     parser.add_option("--logbase", dest="log_base", type=float, default=1.4641,
         help="Upsampling factor b; also the base of the logarithm in rate computation.  Default 1.4641.")
-    parser.add_option("--zoomctr", dest="zoom_ctr", type=float, default=0.0,
-        help="Zoom modality: used only in conjunction with zoomexp option - see below. " +\
-        "Default=0.0.  Use 999.0 in zoomctr or zoomexp to manually specify left/right bounds (not implemented in Version 1.0).")
-    parser.add_option("--zoomexp", dest="zoom_exp", type=float, default=1.0,
-        help="Zoom modality: set query bounds and bounding box such that (1) center is (x,x,...,x) where x=zoomctr"+\
-        " (2) length of query grid is 10e[zoomexp] in each dimension and (3) bounding box determined from testbdsc."+\
-        " Default=0.0.  Use 999.0 in zoomctr or zoomexp to manually specify left/right bounds (not implemented in Version 1.0).")
     parser.add_option("--queryleftbd", dest="queryleftbound", type=float, default=0.0,
         help="Left bound of interval used to build query point domain [a, b]^dim. Overwritten if zoom modality is used (see above). Default 0.0")
     parser.add_option("--queryrightbd", dest="queryrightbound", type=float, default=1.0,
@@ -326,8 +331,6 @@ if __name__ == '__main__':
 	    help="Compute gradients within subroutine that calls DelaunaySparse. Default True.")
     parser.add_option("--outc", dest="out_cor", type=int, default=-1,
         help="Output coordinate to assess.  Default -1 avoids this modality and takes the first output coordinate.")
-    parser.add_option("--seed", dest="spec_seed", type=int, default=0,
-        help="Value passed as global seed to random number generator.  Default 0.")
     parser.add_option("--itmax", dest="it_max", type=int, default=100,
         help="Max number of iterations.  More robust to use --maxsamp to set threshold.  Default = 100.")
     
@@ -337,22 +340,15 @@ if __name__ == '__main__':
     def echo_options(options):
         print("Selected options:")
         print()
-        print("Job ID:      ", options.jobid) 
-        print("Function:    ", options.fn_name)
+        print("Job ID:      ", options.jobid)
+        if options.infile is None:
+            print("Function:    ", options.fn_name)
+        else:
+            print("Path to static data set: ", options.infile)
         print("Dimension:   ", options.dim)
         print()
         print("Query points per dim:", options.numtestperdim)
         print("Total number of query points:", options.numtestperdim ** options.dim)
-
-        # Set bounding box left/right bounds based on zoom center, zoom exponent, and scale factor qpdf
-        options.bboxleftbound  = np.round(options.zoom_ctr - (10 ** (options.zoom_exp))/options.tb_scale,2)
-        options.bboxrightbound = np.round(options.zoom_ctr + (10 ** (options.zoom_exp))/options.tb_scale,2)
-
-        # Set query lattice left/right bounds based on bounding box bounds and scale factor qpdf
-        tg_scale_fac = (1.0-options.tb_scale)/2
-        interval_width = options.bboxrightbound - options.bboxleftbound
-        options.queryleftbound  = options.bboxleftbound  + tg_scale_fac * interval_width
-        options.queryrightbound = options.bboxrightbound - tg_scale_fac * interval_width
 
         print("Query point bounds in each dim: ", "[", options.queryleftbound, ", ", options.queryrightbound, "]")
         print("Query points dimension fraction (qpdf): ", options.tb_scale)
@@ -385,10 +381,51 @@ if __name__ == '__main__':
             print()
             print("==> Set extrapolation threshold in [0,0.5]")
             exit()
-        if (options.fn_name != 'griewank'):
+        if (options.fn_name != 'griewank' and options.fn_name != 'staticdata'):
             print("==> ERROR: Requested function ", options.fn_name)
             print("Only the function 'griewank' is supported by this version of the code.")
             exit()
+
+
+    if options.infile is None:
+        # Set bounding box left/right bounds based on zoom center, zoom exponent, and scale factor qpdf
+        options.bboxleftbound  = np.round(options.zoom_ctr - (10 ** (options.zoom_exp))/options.tb_scale,2)
+        options.bboxrightbound = np.round(options.zoom_ctr + (10 ** (options.zoom_exp))/options.tb_scale,2)
+
+        # Set query lattice left/right bounds based on bounding box bounds and scale factor qpdf
+        tg_scale_fac = (1.0-options.tb_scale)/2
+        interval_width = options.bboxrightbound - options.bboxleftbound
+        options.queryleftbound  = options.bboxleftbound  + tg_scale_fac * interval_width
+        options.queryrightbound = options.bboxrightbound - tg_scale_fac * interval_width
+
+    else:  # read in static data; set options accordingly
+        options.fn_name = 'staticdata'
+
+        print("==> Reading in data from ", options.infile)
+        datadf = pd.read_csv(options.infile, header=None, index_col=False)
+        print("==> Interpreting as", datadf.shape[0], "data points with input dim", datadf.shape[1]-1, "and output dim 1." )
+        print(datadf)
+        exit()
+        # print("==> Initializing 400k pt sampled surrogate of N210808 data set from Eugene, May 2022")
+        # df = pd.read_csv('/usr/workspace/gillette/cogsim/static_data/N210808_SurrogateSamples_Yield_BurnOff_220520.csv', header=0, index_col=0)
+        
+        # python function_approx_exs.py --jobid ${SLURM_JOBID:(-6)} --exp 2 --fn griewank --dim 2 --numtestperdim 20 --numtrainpts 1000 --testbdsc 0.8 --zoomctr 0 --zoomexp 2 --exp2itmax 20 --maxsamp 10000 --logbase 1.4641 --grad
+
+        # df = df[[
+        #         'input_asym_1_0_peak', 
+        #         'input_asym_2_0_peak',
+        #         'input_asym_2_0_off',
+        #         'input_fds_dt_ns_midt',
+        #         'input_fds_dt_ns_peak',
+        #         'input_fds_dt_ns_off',
+        #         'input_preheat',
+        #         'input_fracl',
+        #         'input_mband',
+        #         'input_alpha_dep',
+        #         'yield_total'
+        #         ]]
+
+
 
     echo_options(options)
 
@@ -397,16 +434,24 @@ if __name__ == '__main__':
 
     # torch.manual_seed(globalseed)
 
-    data_train_inputs, data_train_outputs = make_random_training_in_box(rng)
+    if options.infile is None:
+        data_train_inputs, data_train_outputs = make_random_training_in_box(rng)
+        data_test_inputs, data_test_outputs = make_test_data_grid(rng)
+    else:
+        print("NEED TO PUT SOMETHING HERE")
+        exit()
+        # data_train_inputs  = dataset.iloc[0:options.numtrainpts, 0:options.dim]
+        # data_train_outputs  = dataset.iloc[0:options.numtrainpts,-1:]
     
-    data_test_inputs, data_test_outputs = make_test_data_grid(rng)
 
-    
-    outfname = 'zz-' + str(options.jobid) + "-" + str(options.fn_name) + "-d" + str(options.dim) + "-tpd" + str(options.numtestperdim) + "-lb" + str(options.bboxleftbound) + "-rb" + str(options.bboxrightbound) + "-tb" + str(options.tb_scale) + "-log" + str(options.log_base) +".csv"
-    if (options.zoom_ctr != 999.0 and options.zoom_exp != 999.0): # add in -zoom[exponent value] before csv
-        outfname = outfname[:-4] + "-zoom" + str(options.zoom_exp) + ".csv"
-    if (options.spec_seed != 0): # add in -seed[seed value] before csv
-        outfname = outfname[:-4] + "-seed" + str(options.spec_seed) + ".csv"
+    if options.infile is None:
+        outfname = 'zz-' + str(options.jobid) + "-" + str(options.fn_name) + "-d" + str(options.dim) + "-tpd" + str(options.numtestperdim) + "-lb" + str(options.bboxleftbound) + "-rb" + str(options.bboxrightbound) + "-tb" + str(options.tb_scale) + "-log" + str(options.log_base) +".csv"
+        if (options.zoom_ctr != 999.0 and options.zoom_exp != 999.0): # add in -zoom[exponent value] before csv
+            outfname = outfname[:-4] + "-zoom" + str(options.zoom_exp) + ".csv"
+        if (options.spec_seed != 0): # add in -seed[seed value] before csv
+            outfname = outfname[:-4] + "-seed" + str(options.spec_seed) + ".csv"
+    else:
+        outfname = 'zz-temp.csv'
     print("===> Output will be stored in file ",outfname)
 
     results_df = []
@@ -420,8 +465,8 @@ if __name__ == '__main__':
 
     print("")
     print("=================================")
-    print("For output coordinate ", out_coord,": ")
-    print("=== results for ", options.fn_name, " ===")
+    # print("For output coordinate ", out_coord,": ")
+    # print("=== results for ", options.fn_name, " ===")
     print("samples | density | prop extrap | MSD diff | MSD rate | grad diff | grad rate | analytic diff | analytic rate ") 
     print("")
 
