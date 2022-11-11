@@ -18,7 +18,7 @@ except ValueError as err:
     print("Illegal value in argument: {0}".format(err))
     sys.exit(1)
 
-min_density = 50
+min_density = 0
 
 from functools import reduce
 
