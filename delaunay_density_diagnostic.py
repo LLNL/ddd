@@ -79,7 +79,10 @@ def make_test_data_grid(rng, static_data=False):
     grid_pts = grid_pts.reshape(options.dim, num_samples_per_dim ** options.dim)
     grid_pts = grid_pts.T
 
-    outputs_on_grid = tf(grid_pts)
+    if options.infile is None:
+        outputs_on_grid = tf(grid_pts)
+    else:
+        outputs_on_grid = 0 * grid_pts # intentionally empty df; outputs at query points are not known
 
     data_test_inputs  = pd.DataFrame(grid_pts)
     data_test_outputs = pd.DataFrame(outputs_on_grid)
@@ -336,6 +339,8 @@ if __name__ == '__main__':
     
     (options, args) = parser.parse_args()
     
+    globalseed = options.spec_seed
+    rng = np.random.default_rng(globalseed)  
 
     def echo_options(options):
         print("Selected options:")
@@ -392,45 +397,34 @@ if __name__ == '__main__':
         options.bboxleftbound  = np.round(options.zoom_ctr - (10 ** (options.zoom_exp))/options.tb_scale,2)
         options.bboxrightbound = np.round(options.zoom_ctr + (10 ** (options.zoom_exp))/options.tb_scale,2)
 
-        # Set query lattice left/right bounds based on bounding box bounds and scale factor qpdf
-        tg_scale_fac = (1.0-options.tb_scale)/2
-        interval_width = options.bboxrightbound - options.bboxleftbound
-        options.queryleftbound  = options.bboxleftbound  + tg_scale_fac * interval_width
-        options.queryrightbound = options.bboxrightbound - tg_scale_fac * interval_width
-
     else:  # read in static data; set options accordingly
         options.fn_name = 'staticdata'
 
         print("==> Reading in data from ", options.infile)
         datadf = pd.read_csv(options.infile, header=None, index_col=False)
-        print("==> Interpreting as", datadf.shape[0], "data points with input dim", datadf.shape[1]-1, "and output dim 1." )
+        detected_count = datadf.shape[0]
+        detected_dim = datadf.shape[1]-1
+        print("==> Interpreting as", detected_count, "data points with input dim", detected_dim, "and output dim 1." )
         print(datadf)
-        exit()
-        # print("==> Initializing 400k pt sampled surrogate of N210808 data set from Eugene, May 2022")
-        # df = pd.read_csv('/usr/workspace/gillette/cogsim/static_data/N210808_SurrogateSamples_Yield_BurnOff_220520.csv', header=0, index_col=0)
-        
-        # python function_approx_exs.py --jobid ${SLURM_JOBID:(-6)} --exp 2 --fn griewank --dim 2 --numtestperdim 20 --numtrainpts 1000 --testbdsc 0.8 --zoomctr 0 --zoomexp 2 --exp2itmax 20 --maxsamp 10000 --logbase 1.4641 --grad
+        print("==> Rescaling so that inputs are in [0,1]^", detected_dim, "and outputs are in [0,1]")
+        datadf = (datadf - datadf.min())/(datadf.max()-datadf.min())
+        # shuffle data set (uses random seed)
+        datadf = datadf.sample(random_state=rng.integers(low=0, high=1000000), frac=1).reset_index(drop=True)
 
-        # df = df[[
-        #         'input_asym_1_0_peak', 
-        #         'input_asym_2_0_peak',
-        #         'input_asym_2_0_off',
-        #         'input_fds_dt_ns_midt',
-        #         'input_fds_dt_ns_peak',
-        #         'input_fds_dt_ns_off',
-        #         'input_preheat',
-        #         'input_fracl',
-        #         'input_mband',
-        #         'input_alpha_dep',
-        #         'yield_total'
-        #         ]]
+        options.dim = detected_dim
+        options.max_samp = detected_count
+        options.numtrainpts =  int(np.floor(0.1 * detected_count)) ## hard code initial number of training points to be 20% of total
 
+        ## default options for bboxbounds, querybounds, and tb_scale are suitable for dim=2
+        ## otherwise, need to set those here and possibly adjust setting of query lattice just below
 
+    # Set query lattice left/right bounds based on bounding box bounds and scale factor qpdf
+    tg_scale_fac = (1.0-options.tb_scale)/2
+    interval_width = options.bboxrightbound - options.bboxleftbound
+    options.queryleftbound  = options.bboxleftbound  + tg_scale_fac * interval_width
+    options.queryrightbound = options.bboxrightbound - tg_scale_fac * interval_width
 
     echo_options(options)
-
-    globalseed = options.spec_seed
-    rng = np.random.default_rng(globalseed)  
 
     # torch.manual_seed(globalseed)
 
@@ -438,11 +432,12 @@ if __name__ == '__main__':
         data_train_inputs, data_train_outputs = make_random_training_in_box(rng)
         data_test_inputs, data_test_outputs = make_test_data_grid(rng)
     else:
-        print("NEED TO PUT SOMETHING HERE")
-        exit()
-        # data_train_inputs  = dataset.iloc[0:options.numtrainpts, 0:options.dim]
-        # data_train_outputs  = dataset.iloc[0:options.numtrainpts,-1:]
-    
+        # train data is drawn from data set
+        data_train_inputs   = datadf.iloc[0:options.numtrainpts, 0:options.dim]
+        data_train_outputs  = datadf.iloc[0:options.numtrainpts,-1:]
+
+        # make_test_data_grid will return zero for outputs in static data case
+        data_test_inputs, data_test_outputs = make_test_data_grid(rng)
 
     if options.infile is None:
         outfname = 'zz-' + str(options.jobid) + "-" + str(options.fn_name) + "-d" + str(options.dim) + "-tpd" + str(options.numtestperdim) + "-lb" + str(options.bboxleftbound) + "-rb" + str(options.bboxrightbound) + "-tb" + str(options.tb_scale) + "-log" + str(options.log_base) +".csv"
@@ -499,6 +494,7 @@ if __name__ == '__main__':
         num_samples_to_add[i]     = int(total_samples_so_far[i+1] - total_samples_so_far[i])
         if (total_samples_so_far[i+1] > options.max_samp):
             quitloop = True
+
 
     ########################################################################
     # do iterative improvement according to upsampling schedule saved in num_samples_to_add
@@ -613,9 +609,17 @@ if __name__ == '__main__':
             options.numtrainpts = 1
             quitloop = True
 
-        new_sample_inputs, new_sample_outputs = make_random_training_in_box(rng)
-            
+        # collect new samples, either randomly within box (if function was given) 
+        #                      or previously unseen points from data set (if fixed data set was given)
+        if options.infile is None: # sampling from a function or surrogate
+            new_sample_inputs, new_sample_outputs = make_random_training_in_box(rng)
+        else:
+            start = int(total_samples_so_far[i])                        # index to start next sample batch
+            stop  = int(total_samples_so_far[i]) + options.numtrainpts  # index to end   next sample batch
 
+            new_sample_inputs  = datadf.iloc[start:stop, 0:options.dim]
+            new_sample_outputs = datadf.iloc[start:stop,-1:]
+            
         ##########################################
         # update sample set for next iteration
         ##########################################
