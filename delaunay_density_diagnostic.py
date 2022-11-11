@@ -447,6 +447,7 @@ if __name__ == '__main__':
             outfname = outfname[:-4] + "-seed" + str(options.spec_seed) + ".csv"
     else:
         outfname = 'zz-temp.csv'
+        outfname = outfname[:-4] + "-seed" + str(options.spec_seed) + ".csv"
     print("===> Output will be stored in file ",outfname)
 
     results_df = []

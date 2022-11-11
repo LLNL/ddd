@@ -33,7 +33,3 @@ for (( i=0; $i<$(bc<<<"$maxzoom/$zoomstep"); i++ )); do
 done
 ls zz-123456*seed*.csv > allfiles.multi
 python generate_ddd_figures.py allfiles.multi
-
-## call with new functionality
-
-# python delaunay_density_diagnostic.py --staticdata staticdata/data_griewank_1000.csv 
