@@ -18,7 +18,7 @@ except ValueError as err:
     print("Illegal value in argument: {0}".format(err))
     sys.exit(1)
 
-min_density = 0
+min_density = 0 # 50 for original Griewank example
 
 from functools import reduce
 

@@ -70,7 +70,7 @@ def make_test_data_grid(rng, static_data=False):
 
     x = np.linspace(options.queryleftbound, options.queryrightbound, num_samples_per_dim)
 
-    print("===> Test coordinates for each dimension = ", x)
+    print("===> Test coordinates for each dimension = \n", x)
     mg_in = []
     for i in range(options.dim):
         mg_in.append(x)
@@ -79,10 +79,10 @@ def make_test_data_grid(rng, static_data=False):
     grid_pts = grid_pts.reshape(options.dim, num_samples_per_dim ** options.dim)
     grid_pts = grid_pts.T
 
-    if options.infile is None:
-        outputs_on_grid = tf(grid_pts)
-    else:
+    if static_data:
         outputs_on_grid = 0 * grid_pts # intentionally empty df; outputs at query points are not known
+    else:
+        outputs_on_grid = tf(grid_pts)
 
     data_test_inputs  = pd.DataFrame(grid_pts)
     data_test_outputs = pd.DataFrame(outputs_on_grid)
@@ -406,23 +406,43 @@ if __name__ == '__main__':
         detected_dim = datadf.shape[1]-1
         print("==> Interpreting as", detected_count, "data points with input dim", detected_dim, "and output dim 1." )
         print(datadf)
-        print("==> Rescaling so that inputs are in [0,1]^", detected_dim, "and outputs are in [0,1]")
-        datadf = (datadf - datadf.min())/(datadf.max()-datadf.min())
-        # shuffle data set (uses random seed)
+
+        
+        ## rescale data to [0,1]
+        # data_length_scale = datadf.max()-datadf.min()
+        # print(data_length_scale)
+        # exit()
+        # print("==> Rescaling so that inputs are in [0,1]^", detected_dim, "and outputs are in [0,1]")
+        # datadf = (datadf - datadf.min())/(datadf.max()-datadf.min())
+
+        ## shuffle data set (uses random seed)
         datadf = datadf.sample(random_state=rng.integers(low=0, high=1000000), frac=1).reset_index(drop=True)
 
         options.dim = detected_dim
         options.max_samp = detected_count
-        options.numtrainpts =  int(np.floor(0.1 * detected_count)) ## hard code initial number of training points to be 20% of total
+        options.numtrainpts =  int(np.floor(0.1 * detected_count)) ## hard code initial # of training points to be fixed %age of total
+        
+        ## bounding box for rescaled data should be [0,1]
+        # options.bboxleftbound  = 0.0
+        # options.bboxrightbound = 1.0
 
-        ## default options for bboxbounds, querybounds, and tb_scale are suitable for dim=2
-        ## otherwise, need to set those here and possibly adjust setting of query lattice just below
-
+        ## hard-coded bounding box options
+        options.bboxleftbound  = -125.0
+        options.bboxrightbound = 125.0
+        
+        
+        ## Query points dimension fraction (qpdf) default of 0.8 is appropriate for dim=2
+        options.tb_scale = 0.8
+    
     # Set query lattice left/right bounds based on bounding box bounds and scale factor qpdf
     tg_scale_fac = (1.0-options.tb_scale)/2
     interval_width = options.bboxrightbound - options.bboxleftbound
     options.queryleftbound  = options.bboxleftbound  + tg_scale_fac * interval_width
     options.queryrightbound = options.bboxrightbound - tg_scale_fac * interval_width
+
+        
+
+
 
     echo_options(options)
 
@@ -430,14 +450,18 @@ if __name__ == '__main__':
 
     if options.infile is None:
         data_train_inputs, data_train_outputs = make_random_training_in_box(rng)
-        data_test_inputs, data_test_outputs = make_test_data_grid(rng)
+        data_test_inputs, data_test_outputs = make_test_data_grid(rng, static_data=False)
     else:
         # train data is drawn from data set
         data_train_inputs   = datadf.iloc[0:options.numtrainpts, 0:options.dim]
         data_train_outputs  = datadf.iloc[0:options.numtrainpts,-1:]
+        print("\ndata train in  = \n", data_train_inputs)
+        print("\ndata train out = \n", data_train_outputs)
 
         # make_test_data_grid will return zero for outputs in static data case
-        data_test_inputs, data_test_outputs = make_test_data_grid(rng)
+        data_test_inputs, data_test_outputs = make_test_data_grid(rng, static_data=True)
+        print("\ndata test in  = \n", data_test_inputs)
+        print("\ndata test out = \n", data_test_outputs)
 
     if options.infile is None:
         outfname = 'zz-' + str(options.jobid) + "-" + str(options.fn_name) + "-d" + str(options.dim) + "-tpd" + str(options.numtestperdim) + "-lb" + str(options.bboxleftbound) + "-rb" + str(options.bboxrightbound) + "-tb" + str(options.tb_scale) + "-log" + str(options.log_base) +".csv"
