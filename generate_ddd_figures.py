@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 from matplotlib import colors
 from matplotlib.pyplot import cm
+import subprocess
+   
 
 import sys
 try:
@@ -157,7 +159,8 @@ for i in range(2):
 
 plt.subplots_adjust(left=0.05, right=0.95, top=0.9, bottom=0.05)
 
-
-plt.savefig('ddd-figure.png',format='png', bbox_inches='tight')
-plt.show()
+figname = 'ddd-figure.png'
+plt.savefig(figname,format='png', bbox_inches='tight')
+# plt.show()
 print("==> Saved figure as ddd-figure.png")
+subprocess.call(["open", figname])

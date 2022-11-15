@@ -412,23 +412,23 @@ if __name__ == '__main__':
         # data_length_scale = datadf.max()-datadf.min()
         # print(data_length_scale)
         # exit()
-        # print("==> Rescaling so that inputs are in [0,1]^", detected_dim, "and outputs are in [0,1]")
-        # datadf = (datadf - datadf.min())/(datadf.max()-datadf.min())
+        print("==> Rescaling so that inputs are in [0,1]^", detected_dim, "and outputs are in [0,1]")
+        datadf = (datadf - datadf.min())/(datadf.max()-datadf.min())
 
         ## shuffle data set (uses random seed)
         datadf = datadf.sample(random_state=rng.integers(low=0, high=1000000), frac=1).reset_index(drop=True)
 
         options.dim = detected_dim
         options.max_samp = detected_count
-        options.numtrainpts =  int(np.floor(0.1 * detected_count)) ## hard code initial # of training points to be fixed %age of total
+        options.numtrainpts =  int(np.floor(0.01 * detected_count)) ## hard code initial # of training points to be fixed %age of total
         
         ## bounding box for rescaled data should be [0,1]
-        # options.bboxleftbound  = 0.0
-        # options.bboxrightbound = 1.0
+        options.bboxleftbound  = 0.0
+        options.bboxrightbound = 1.0
 
         ## hard-coded bounding box options
-        options.bboxleftbound  = -125.0
-        options.bboxrightbound = 125.0
+        # options.bboxleftbound  = -1025.0
+        # options.bboxrightbound = 1025.0
         
         
         ## Query points dimension fraction (qpdf) default of 0.8 is appropriate for dim=2
@@ -455,13 +455,13 @@ if __name__ == '__main__':
         # train data is drawn from data set
         data_train_inputs   = datadf.iloc[0:options.numtrainpts, 0:options.dim]
         data_train_outputs  = datadf.iloc[0:options.numtrainpts,-1:]
-        print("\ndata train in  = \n", data_train_inputs)
-        print("\ndata train out = \n", data_train_outputs)
+        # print("\ndata train in  = \n", data_train_inputs)
+        # print("\ndata train out = \n", data_train_outputs)
 
         # make_test_data_grid will return zero for outputs in static data case
         data_test_inputs, data_test_outputs = make_test_data_grid(rng, static_data=True)
-        print("\ndata test in  = \n", data_test_inputs)
-        print("\ndata test out = \n", data_test_outputs)
+        # print("\ndata test in  = \n", data_test_inputs)
+        # print("\ndata test out = \n", data_test_outputs)
 
     if options.infile is None:
         outfname = 'zz-' + str(options.jobid) + "-" + str(options.fn_name) + "-d" + str(options.dim) + "-tpd" + str(options.numtestperdim) + "-lb" + str(options.bboxleftbound) + "-rb" + str(options.bboxrightbound) + "-tb" + str(options.tb_scale) + "-log" + str(options.log_base) +".csv"
