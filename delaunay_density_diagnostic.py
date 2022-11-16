@@ -427,8 +427,8 @@ if __name__ == '__main__':
         # options.bboxrightbound = 1.0
 
         ## hard-coded bounding box options
-        options.bboxleftbound  = -1025.0
-        options.bboxrightbound = 1025.0
+        options.bboxleftbound  = -1250.0
+        options.bboxrightbound = 1250.0
         
         
         ## Query points dimension fraction (qpdf) default of 0.8 is appropriate for dim=2
