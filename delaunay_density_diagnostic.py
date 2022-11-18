@@ -4,7 +4,7 @@
 #   as described in the paper
 #   Data-driven geometric scale detection via Delaunay interpolation
 #   by Andrew Gillette and Eugene Kur
-#   Version 1.0, March 2022
+#   Version 2.0, December 2022
 #
 # For usage information, run:
 # python delaunay_density_diagnostic.py --help
@@ -295,6 +295,8 @@ if __name__ == '__main__':
     parser.add_option("--staticdata", dest="infile", type=str, default=None,
         help="Path to static dataset of input/output pairs.  See README for required formatting.  Setting this signals use of" +\
             " modality to return gradient values and uncertainty quantification.")
+    parser.add_option("--validsplit", dest="valid_split", type=float, default=0.05,
+        help="Proportion of static data to hold out as test set. Only used if --staticdata option is provided.  Default 0.05.")
     parser.add_option("--seed", dest="spec_seed", type=int, default=0,
         help="Value passed as global seed to random number generator.  Default 0.")
     parser.add_option("--zoomexp", dest="zoom_exp", type=float, default=1.0,
@@ -396,6 +398,12 @@ if __name__ == '__main__':
         # Set bounding box left/right bounds based on zoom center, zoom exponent, and scale factor qpdf
         options.bboxleftbound  = np.round(options.zoom_ctr - (10 ** (options.zoom_exp))/options.tb_scale,2)
         options.bboxrightbound = np.round(options.zoom_ctr + (10 ** (options.zoom_exp))/options.tb_scale,2)
+        
+        # Set query lattice left/right bounds based on bounding box bounds and scale factor qpdf
+        tg_scale_fac = (1.0-options.tb_scale)/2
+        interval_width = options.bboxrightbound - options.bboxleftbound
+        options.queryleftbound  = options.bboxleftbound  + tg_scale_fac * interval_width
+        options.queryrightbound = options.bboxrightbound - tg_scale_fac * interval_width
 
     else:  # read in static data; set options accordingly
         options.fn_name = 'staticdata'
@@ -407,7 +415,6 @@ if __name__ == '__main__':
         print("==> Interpreting as", detected_count, "data points with input dim", detected_dim, "and output dim 1." )
         print(datadf)
 
-        
         ## rescale data to [0,1]
         # data_length_scale = datadf.max()-datadf.min()
         # print(data_length_scale)
@@ -415,34 +422,45 @@ if __name__ == '__main__':
         # print("==> Rescaling so that inputs are in [0,1]^", detected_dim, "and outputs are in [0,1]")
         # datadf = (datadf - datadf.min())/(datadf.max()-datadf.min())
 
-        ## shuffle data set (uses random seed)
-        datadf = datadf.sample(random_state=rng.integers(low=0, high=1000000), frac=1).reset_index(drop=True)
+        ## set aside fixed test set (does NOT use random seed)
+        print("==> Setting aside", 100*options.valid_split, "% of the provided data as a test set.")
+        indices = list(range(detected_count))
+        split = int(np.floor(options.valid_split * detected_count))
+
+        rng_for_split_only = np.random.default_rng(12345) # always use seed 12345; should not see other rng
+        rng_for_split_only.shuffle(indices) 
+        train_indices, test_indices = indices[split:], indices[:split]
+
+        train_df = datadf.iloc[train_indices].reset_index(drop=True)
+        test_df  = datadf.iloc[test_indices].reset_index(drop=True)
+            
+        ## shuffle training data set (uses provided random seed via rng)
+        train_df = train_df.sample(random_state=rng.integers(low=0, high=1000000), frac=1).reset_index(drop=True)
 
         options.dim = detected_dim
         options.max_samp = detected_count
-        options.numtrainpts =  int(np.floor(0.2 * detected_count)) ## hard code initial # of training points to be fixed %age of total
+        ## hard code initial # of training points to be fixed %age of total data set size
+        options.numtrainpts =  int(np.floor(0.2 * detected_count)) 
         
-        ## bounding box for rescaled data should be [0,1]
-        # options.bboxleftbound  = 0.0
-        # options.bboxrightbound = 1.0
+        ## alternate set up if lattice query grid is desired instead of train/test split
+            # train_df = datadf
 
-        ## hard-coded bounding box options
-        options.bboxleftbound  = -1250.0
-        options.bboxrightbound = 1250.0
-        
-        
-        ## Query points dimension fraction (qpdf) default of 0.8 is appropriate for dim=2
-        options.tb_scale = 0.8
+            ## bounding box for rescaled data should be [0,1]
+            # options.bboxleftbound  = 0.0
+            # options.bboxrightbound = 1.0
+
+            ## hard-coded bounding box options
+            # options.bboxleftbound  = -1250.0
+            # options.bboxrightbound = 1250.0
+            
+            ## Query points dimension fraction (qpdf) default of 0.8 is appropriate for dim=2
+            # options.tb_scale = 0.8
     
-    # Set query lattice left/right bounds based on bounding box bounds and scale factor qpdf
-    tg_scale_fac = (1.0-options.tb_scale)/2
-    interval_width = options.bboxrightbound - options.bboxleftbound
-    options.queryleftbound  = options.bboxleftbound  + tg_scale_fac * interval_width
-    options.queryrightbound = options.bboxrightbound - tg_scale_fac * interval_width
-
-        
-
-
+            ## Set query lattice left/right bounds based on bounding box bounds and scale factor qpdf
+            # tg_scale_fac = (1.0-options.tb_scale)/2
+            # interval_width = options.bboxrightbound - options.bboxleftbound
+            # options.queryleftbound  = options.bboxleftbound  + tg_scale_fac * interval_width
+            # options.queryrightbound = options.bboxrightbound - tg_scale_fac * interval_width
 
     echo_options(options)
 
@@ -453,8 +471,8 @@ if __name__ == '__main__':
         data_test_inputs, data_test_outputs = make_test_data_grid(rng, static_data=False)
     else:
         # train data is drawn from data set
-        data_train_inputs   = datadf.iloc[0:options.numtrainpts, 0:options.dim]
-        data_train_outputs  = datadf.iloc[0:options.numtrainpts,-1:]
+        data_train_inputs   = train_df.iloc[0:options.numtrainpts, 0:options.dim]
+        data_train_outputs  = train_df.iloc[0:options.numtrainpts,-1:]
         # print("\ndata train in  = \n", data_train_inputs)
         # print("\ndata train out = \n", data_train_outputs)
 
@@ -642,8 +660,8 @@ if __name__ == '__main__':
             start = int(total_samples_so_far[i])                        # index to start next sample batch
             stop  = int(total_samples_so_far[i]) + options.numtrainpts  # index to end   next sample batch
 
-            new_sample_inputs  = datadf.iloc[start:stop, 0:options.dim]
-            new_sample_outputs = datadf.iloc[start:stop,-1:]
+            new_sample_inputs  = train_df.iloc[start:stop, 0:options.dim]
+            new_sample_outputs = train_df.iloc[start:stop,-1:]
             
         ##########################################
         # update sample set for next iteration
