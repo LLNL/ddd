@@ -470,14 +470,19 @@ if __name__ == '__main__':
         data_train_inputs, data_train_outputs = make_random_training_in_box(rng)
         data_test_inputs, data_test_outputs = make_test_data_grid(rng, static_data=False)
     else:
-        # train data is drawn from data set
+        # train data is drawn from the (already shuffled) training data set
         data_train_inputs   = train_df.iloc[0:options.numtrainpts, 0:options.dim]
         data_train_outputs  = train_df.iloc[0:options.numtrainpts,-1:]
         # print("\ndata train in  = \n", data_train_inputs)
         # print("\ndata train out = \n", data_train_outputs)
 
-        # make_test_data_grid will return zero for outputs in static data case
-        data_test_inputs, data_test_outputs = make_test_data_grid(rng, static_data=True)
+        # test data is all of the test set
+        data_test_inputs   = test_df.iloc[:, 0:options.dim]
+        data_test_outputs  = test_df.iloc[:,-1:]
+
+        ## alternatively: use lattice test grid; make_test_data_grid will return zero for outputs in static data case
+        # data_test_inputs, data_test_outputs = make_test_data_grid(rng, static_data=True)
+        
         # print("\ndata test in  = \n", data_test_inputs)
         # print("\ndata test out = \n", data_test_outputs)
 
