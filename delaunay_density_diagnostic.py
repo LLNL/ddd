@@ -410,6 +410,10 @@ if __name__ == '__main__':
 
         print("==> Reading in data from ", options.infile)
         datadf = pd.read_csv(options.infile, header=None, index_col=False)
+
+        ## downsample datadf before processing...
+        # datadf = datadf.sample(random_state=12345, frac=0.3).reset_index(drop=True)
+
         detected_count = datadf.shape[0]
         detected_dim = datadf.shape[1]-1
         print("==> Interpreting as", detected_count, "data points with input dim", detected_dim, "and output dim 1." )
