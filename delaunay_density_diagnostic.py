@@ -25,6 +25,7 @@ import pandas as pd
 # import torch.utils.data as Data
 # from torch.utils.data.sampler import SubsetRandomSampler
 import numpy as np
+import numpy.ma as ma
 
 from numpy.random import rand, default_rng
 from numpy import arccos, array, degrees, absolute
@@ -528,6 +529,7 @@ if __name__ == '__main__':
 
     prev_error = 999999
     prev_vals_at_test = []
+    prev_extrap_indices = []
     prev_diff = 999999
 
     ########################################################################
