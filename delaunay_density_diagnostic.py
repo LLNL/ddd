@@ -195,8 +195,7 @@ def compute_DS_only(data_train_inputs, data_train_outputs, data_test_inputs, dat
         grad_est_DS.fill(999)
         
         for j in range(simp_out.shape[1]):
-            # note: the value of simp_out.shape[1] should equal the number of interpolation outputs
-            #       extrapolation points don't get a simp_out entry, I think?
+            # note: extrapolation points get all all zero indices for the simplex
             #
             #       mutliple test points may lie in the same simplex
             #       but that just means you might duplicate effort
@@ -209,26 +208,32 @@ def compute_DS_only(data_train_inputs, data_train_outputs, data_test_inputs, dat
 
             for outputdim in range(interp_in_n.shape[0]):
 
-                matrixA = np.zeros([options.dim+1, options.dim+1])
-                for i in range(options.dim+1):
-                    matrixA[i] = np.append(unscaled_inputs[:,simp_out[:,j][i]-1], interp_in_n[outputdim][simp_out[:,j][i]-1])
+                simp_out_np = np.array(simp_out[:,j])
+                if np.all((simp_out_np == 0)): # extrapolation occured
+                    grad_out = np.zeros(options.dim)
+                    grad_out[:] = np.nan
+                else:
+                    matrixA = np.zeros([options.dim+1, options.dim+1])
+                    for i in range(options.dim+1):
+                        matrixA[i] = np.append(unscaled_inputs[:,simp_out[:,j][i]-1], interp_in_n[outputdim][simp_out[:,j][i]-1])
 
-                coords = matrixA
+                    coords = matrixA
 
-                G = coords.sum(axis=0) / coords.shape[0]
+                    G = coords.sum(axis=0) / coords.shape[0]
 
-                # run SVD
-                u, s, vh = np.linalg.svd(coords - G)
-                
-                # unitary normal vector
-                hyper_sfc_normal = vh[options.dim, :]
+                    # run SVD
+                    u, s, vh = np.linalg.svd(coords - G)
+                    
+                    # unitary normal vector
+                    hyper_sfc_normal = vh[options.dim, :]
 
-                # approx grad as normal scaled by vertical component, times -1
-                grad_out = hyper_sfc_normal/hyper_sfc_normal[options.dim]
-                grad_out = -grad_out[:-1]
-                # print("grad out = ", grad_out)
+                    # approx grad as normal scaled by vertical component, times -1
+                    grad_out = hyper_sfc_normal/hyper_sfc_normal[options.dim]
+                    grad_out = -grad_out[:-1]
+                    # print("grad out = ", grad_out)
+
+                # end if/else for simplex all zero indices
                 grad_est_DS[outputdim][j] = grad_out
-
             # end loop over output dimns 
     # end if computeGrad
     else:
@@ -262,14 +267,18 @@ def compute_DS_only(data_train_inputs, data_train_outputs, data_test_inputs, dat
     if (sum(error_out) != 0):
         if print_errors:
             unique_errors = sorted(np.unique(error_out))
-            print(" [Delaunay errors:",end="")
+            print("   ==> [ Delaunay errors:",end="")
             for e in unique_errors:
                 if (e == 0): continue
                 indices = tuple(str(i) for i in range(len(error_out))
                                 if (error_out[i] == e))
-                if (len(indices) > 5): indices = indices[:2] + ('...',) + indices[-2:]
-                print(" %3i"%e,"at","{"+",".join(indices)+"}", end=";")
-            print("] ")
+                if (e == 2):
+                    num_extrap = len(indices)
+                    print(" points outside convex hull of training:", num_extrap, "out of", len(error_out), end="")
+                else:
+                    if (len(indices) > 5): indices = indices[:2] + ('...',) + indices[-2:]
+                    print(" %3i"%e,"at","{"+",".join(indices)+"}", end=";")
+            print(" ] ")
         # Reset the errors to simplex of 1s (to be 0) and weights of 0s.
         bad_indices = (error_out > (1 if allow_extrapolation else 0))
         simp_out[:,bad_indices] = 1
@@ -566,8 +575,22 @@ if __name__ == '__main__':
         # print('====> proportion extrapolated = %1.2f' % prop_extrap_iterate)
         density_of_sample = all_pts_in.shape[0] ** (1/options.dim)
 
+        # Make mask for extrapolation points for current and prev interpolation values
+        #   mask according to previous iteration, 
+        #   whose extrap pts are a superset of extrap pts in current iteration
+        #   (This computation is irrelevant in the case i=0)
 
-        # for analytical functions, we can compute the "actual" rate of convergence, for reference
+        if i==0:
+            interp_out_int_only = interp_out_n
+            prev_vals_int_only = prev_vals_at_test
+        else:
+            mask_extrap = np.zeros_like(interp_out_n, dtype=int)
+            mask_extrap[:,prev_extrap_indices] = 1
+            interp_out_int_only = ma.masked_array(interp_out_n, mask_extrap)
+            prev_vals_int_only  = ma.masked_array(prev_vals_at_test, mask_extrap)
+
+        # we can compute the "actual" rate of convergence, for reference
+        #       (development code has syntax to disable this if actual test values are not known)
         ds_vs_actual_at_test = np.sqrt(((interp_out_n[out_coord,:]-actual_test_vals[out_coord,:]) ** 2).mean())
         if (i == 0): 
             error_rate = 0
@@ -585,28 +608,35 @@ if __name__ == '__main__':
                 grad_diff_rate = 0
                 grad_prev_diff = 0
         elif (i == 1):
-            new_vs_prev_at_test = np.sqrt(((interp_out_n[out_coord,:]-prev_vals_at_test[out_coord,:]) ** 2).mean())
+            new_vs_prev_at_test = np.sqrt((interp_out_int_only[out_coord,:]-prev_vals_int_only[out_coord,:]) ** 2).mean()
             diff_rate = 0
             prev_diff = new_vs_prev_at_test
             if (options.computeGrad):
-                grad_new_vs_prev_at_test = np.linalg.norm(grad_est_DS - grad_prev_vals_at_test)
+                ## grad_est_DS may have nans as a flag for extrapolation (look for grad_out[:] = np.nan above)
+                ## so we mask for nans, compress to remove nans, and then compute norm
+                temp = grad_est_DS - grad_prev_vals_at_test
+                temp = np.ma.array(temp, mask=np.isnan(temp))
+                grad_new_vs_prev_at_test = np.linalg.norm(temp.compressed())
+                
                 grad_diff_rate = 0
                 grad_prev_diff = grad_new_vs_prev_at_test
         else: # i > 1
-            new_vs_prev_at_test = np.sqrt(((interp_out_n[out_coord,:]-prev_vals_at_test[out_coord,:]) ** 2).mean())
+            new_vs_prev_at_test = np.sqrt((interp_out_int_only[out_coord,:]-prev_vals_int_only[out_coord,:]) ** 2).mean()
             # computation of r_k for MSD rate
             diff_rate = np.log(prev_diff/new_vs_prev_at_test)/np.log(options.log_base) 
             prev_diff = new_vs_prev_at_test
             if (options.computeGrad):
-                grad_new_vs_prev_at_test = np.linalg.norm(grad_est_DS - grad_prev_vals_at_test)
-                # computation of r_k for grad-MSD rate
-                grad_diff_rate = -np.log(grad_new_vs_prev_at_test/grad_prev_diff)/np.log(options.log_base)
-                grad_prev_diff = grad_new_vs_prev_at_test
+                ## grad_est_DS may have nans as a flag for extrapolation (look for grad_out[:] = np.nan above)
+                ## so we mask for nans, compress to remove nans, and then compute norm
+                temp = grad_est_DS - grad_prev_vals_at_test
+                temp = np.ma.array(temp, mask=np.isnan(temp))
+                grad_new_vs_prev_at_test = np.linalg.norm(temp.compressed())
 
+                grad_diff_rate = np.log(grad_prev_diff/grad_new_vs_prev_at_test)/np.log(options.log_base)
+                grad_prev_diff = grad_new_vs_prev_at_test
         if (options.computeGrad == False): 
             grad_new_vs_prev_at_test = 0.0
             grad_diff_rate = 0.0
-
 
         if (i == 0):
             print(("% 6i & %3.2f & %1.2f & -- & -- & -- & -- & %5.5f & -- \\\\") % (all_pts_in.shape[0], density_of_sample,  prop_extrap_iterate, ds_vs_actual_at_test), flush=True)
