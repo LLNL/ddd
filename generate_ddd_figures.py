@@ -90,7 +90,7 @@ for i in range(2):
     # ir_5per   =dfsub.groupby('avg samp spacing').quantile(q=.05).rename(columns={"iterate rate norm inside": "ir_5per"})
     # ir_95per  =dfsub.groupby('avg samp spacing').quantile(q=.95).rename(columns={"iterate rate norm inside": "ir_95per"})
     
-    groupP=dfsub.groupby('avg samp spacing')
+    groupP = dfsub.groupby('avg samp spacing')
     #groupby attributes
     ir_mean        =groupP.mean().rename(columns={rate_to_plot: "ir_mean"})
     ir_25per       =groupP.quantile(q=.25).rename(columns={rate_to_plot: "ir_25per"})

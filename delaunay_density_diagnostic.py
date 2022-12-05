@@ -52,6 +52,7 @@ from delsparse import delaunaysparsep as dsp
 
 def tf(X): # Griewnak function, arbitrary dimension input
     X = X.T
+
     term_1 = (1. / 4000.) * sum(X ** 2)
     term_2 = 1.0
     for i, x in enumerate(X):
@@ -59,13 +60,65 @@ def tf(X): # Griewnak function, arbitrary dimension input
 
     return 1. + term_1 - term_2
 
-    # use a paraboloid instead:
+    ## use a paraboloid instead:
+    # X = X.T
     # return (7/20_000) *  ( X[0]**2 + 0.5*(X[1]**2) )
+
+
+#==================================================================================================#
+# Simple visualization routines, for debugging
+#==================================================================================================#
+
+def viz_only_3D(x_data, y_data, z_data):
+    from mpl_toolkits.mplot3d import Axes3D
+    import matplotlib.pyplot as plt
+
+    fig = plt.figure()
+    fig.set_size_inches(8,6)
+    ax = fig.add_subplot(111, projection='3d')
+
+    x = x_data
+    y = y_data
+    z = z_data
+
+    ax.scatter(x, y, z, c='r', marker='o')
+
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
+
+    plt.show()
+    #plt.savefig('viz_out.png',format='png', bbox_inches='tight')
+    return
+
+def viz_only_both(x_data_1, y_data_1, x_data_2, y_data_2):
+    # first data set black, second data set red
+    import matplotlib.pyplot as plt
+
+    fig = plt.figure()
+    fig.set_size_inches(8,6)
+    ax = fig.add_subplot(111)
+
+    x1 = x_data_1
+    y1 = y_data_1
+    x2 = x_data_2
+    y2 = y_data_2
+
+    ax.scatter(x1, y1, c='k', marker='o')
+    ax.scatter(x2, y2, c='r', marker='o')
+
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    # plt.xlim([min,max])
+    # plt.ylim([min,max])
+    plt.show()
+    #plt.savefig('viz_out.png',format='png', bbox_inches='tight')
+    return
 
 #==================================================================================================#
 # Make query point lattice in R^dim
 #==================================================================================================#
-def make_test_data_grid(rng, static_data=False):
+def make_test_data_grid(rng):
 
     num_samples_per_dim = options.numtestperdim
 
@@ -80,10 +133,10 @@ def make_test_data_grid(rng, static_data=False):
     grid_pts = grid_pts.reshape(options.dim, num_samples_per_dim ** options.dim)
     grid_pts = grid_pts.T
 
-    if static_data:
-        outputs_on_grid = 0 * grid_pts # intentionally empty df; outputs at query points are not known
-    else:
+    if options.infile is None:
         outputs_on_grid = tf(grid_pts)
+    else:
+        outputs_on_grid = 0 * grid_pts[:,0] # intentionally empty df; outputs at query points are not known
 
     data_test_inputs  = pd.DataFrame(grid_pts)
     data_test_outputs = pd.DataFrame(outputs_on_grid)
@@ -482,7 +535,7 @@ if __name__ == '__main__':
 
     if options.infile is None:
         data_train_inputs, data_train_outputs = make_random_training_in_box(rng)
-        data_test_inputs, data_test_outputs = make_test_data_grid(rng, static_data=False)
+        data_test_inputs, data_test_outputs = make_test_data_grid(rng)
     else:
         # train data is drawn from the (already shuffled) training data set
         data_train_inputs   = train_df.iloc[0:options.numtrainpts, 0:options.dim]
@@ -492,13 +545,27 @@ if __name__ == '__main__':
 
         # test data is all of the test set
         data_test_inputs   = test_df.iloc[:, 0:options.dim]
-        data_test_outputs  = test_df.iloc[:,-1:]
+        data_test_outputs  = test_df.iloc[:,-1:] 
+
+        ## HARD CODING FOR DEBUGGING
+        options.numtestperdim = 7
+        options.queryleftbound = -750
+        options.queryrightbound = 750
+        data_test_inputs, data_test_outputs = make_test_data_grid(rng)
 
         ## alternatively: use lattice test grid; make_test_data_grid will return zero for outputs in static data case
-        # data_test_inputs, data_test_outputs = make_test_data_grid(rng, static_data=True)
+        # data_test_inputs, data_test_outputs = make_test_data_grid(rng)
         
-        # print("\ndata test in  = \n", data_test_inputs)
-        # print("\ndata test out = \n", data_test_outputs)
+        ## for debugging
+        # print("\ndata train in  = \n", data_train_inputs)
+        # print("\ndata train out = \n", data_train_outputs)
+        # print("\ndata test  in  = \n", data_test_inputs)
+        # print("\ndata test  out = \n", data_test_outputs)
+
+        # viz_only_3D(data_train_inputs[0].to_numpy(), data_train_inputs[1].to_numpy(), data_train_outputs.to_numpy())
+        # viz_only_3D(data_test_inputs[0].to_numpy(), data_test_inputs[1].to_numpy(), data_test_outputs.to_numpy())
+        # viz_only_both(data_train_inputs[0].to_numpy(), data_train_inputs[1].to_numpy(), data_test_inputs[0].to_numpy(), data_test_inputs[1].to_numpy())
+        # exit()
 
     if options.infile is None:
         outfname = 'zz-' + str(options.jobid) + "-" + str(options.fn_name) + "-d" + str(options.dim) + "-tpd" + str(options.numtestperdim) + "-lb" + str(options.bboxleftbound) + "-rb" + str(options.bboxrightbound) + "-tb" + str(options.tb_scale) + "-log" + str(options.log_base) +".csv"
@@ -593,11 +660,13 @@ if __name__ == '__main__':
 
         # we can compute the "actual" rate of convergence, for reference
         #       (development code has syntax to disable this if actual test values are not known)
-        ds_vs_actual_at_test = np.sqrt(((interp_out_n[out_coord,:]-actual_test_vals[out_coord,:]) ** 2).mean())
+        # ds_vs_actual_at_test = np.sqrt(((interp_out_n[out_coord,:]-actual_test_vals[out_coord,:]) ** 2).mean())
+        ds_vs_actual_at_test = 0
         if (i == 0): 
             error_rate = 0
         else:
-            error_rate =  (np.log(prev_error/ds_vs_actual_at_test))/np.log(options.log_base)
+            # error_rate =  (np.log(prev_error/ds_vs_actual_at_test))/np.log(options.log_base)
+            error_rate = 0
 
 
         # difference and rate computation steps for Algorithms 3.1 and 3.2
