@@ -380,6 +380,8 @@ if __name__ == '__main__':
         help="Max number of samples to draw.  Default = 20,000.")
     parser.add_option("--numtrainpts", dest="numtrainpts", type=int, default=850,
         help="Initial number of samples points (n_0 in the paper).  Default = 850.")
+    parser.add_option("--initsampprop", dest="initsampprop", type=float, default=0.20,
+        help="Initial proportion of static data set to sample (for static datasets). Default 0.20")
     parser.add_option("--numtestperdim", dest="numtestperdim", type=int, default=20,
         help="Number of test points per dimension. Default = 20.")
     parser.add_option("--logbase", dest="log_base", type=float, default=1.4641,
@@ -507,7 +509,8 @@ if __name__ == '__main__':
         options.dim = detected_dim
         options.max_samp = detected_count
         ## hard code initial # of training points to be fixed %age of total data set size
-        options.numtrainpts =  int(np.floor(0.2 * detected_count)) 
+        # options.numtrainpts =  int(np.floor(0.2 * detected_count)) 
+        options.numtrainpts =  int(np.floor(options.initsampprop * detected_count)) 
         
         ## alternate set up if lattice query grid is desired instead of train/test split
             # train_df = datadf
