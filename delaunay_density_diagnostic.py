@@ -213,6 +213,9 @@ def compute_DS_only(data_train_inputs, data_train_outputs, data_test_inputs, dat
         q = q.to_numpy()
     p_in = np.asarray(q.T, dtype=np.float64, order="F")
 
+    if len(p_in.shape) == 1: # only have one point; shape is (dim,) but need (dim,1)
+        p_in = p_in.reshape(p_in.shape[0],1)
+
     ir=interp_in_n.shape[0]
 
     interp_in_n = np.require(interp_in_n, 
@@ -293,6 +296,11 @@ def compute_DS_only(data_train_inputs, data_train_outputs, data_test_inputs, dat
     else:
         grad_est_DS = []
 
+    # geDS_df = pd.DataFrame(grad_est_DS.squeeze())
+    # geDS_df.to_csv('grad_est_DS.csv')
+    # # print(grad_est_DS.squeeze().shape)
+    # print("Wrote grad_est_DS to file; quitting")
+    # exit()
 
     allow_extrapolation=True
     print_errors=True
@@ -383,7 +391,9 @@ if __name__ == '__main__':
     parser.add_option("--initsampprop", dest="initsampprop", type=float, default=0.20,
         help="Initial proportion of static data set to sample (for static datasets). Default 0.20")
     parser.add_option("--numtestperdim", dest="numtestperdim", type=int, default=20,
-        help="Number of test points per dimension. Default = 20.")
+        help="Number of query (test) points to use per dimension in a lattice. Default = 20.")
+    parser.add_option("--numtestperbox", dest="numtestperbox", type=int, default=-1,
+        help="Number of query (test) points to draw randomly from a box. Default -1 avoids this modality.")
     parser.add_option("--logbase", dest="log_base", type=float, default=1.4641,
         help="Upsampling factor b; also the base of the logarithm in rate computation.  Default 1.4641.")
     parser.add_option("--queryleftbd", dest="queryleftbound", type=float, default=0.0,
@@ -482,7 +492,7 @@ if __name__ == '__main__':
         detected_count = datadf.shape[0]
         detected_dim = datadf.shape[1]-1
         print("==> Interpreting as", detected_count, "data points with input dim", detected_dim, "and output dim 1." )
-        print(datadf)
+        # print(datadf)
 
         ## rescale data to [0,1]
         # data_length_scale = datadf.max()-datadf.min()
@@ -550,16 +560,47 @@ if __name__ == '__main__':
         data_test_inputs   = test_df.iloc[:, 0:options.dim]
         data_test_outputs  = test_df.iloc[:,-1:] 
 
-        ## HARD CODING FOR DEBUGGING
-        options.numtestperdim = 7
-        options.queryleftbound = -750
-        options.queryrightbound = 750
-        data_test_inputs, data_test_outputs = make_test_data_grid(rng)
+        ##############
+        ## alternative 1: use lattice test grid for query points
+        ##############
 
-        ## alternatively: use lattice test grid; make_test_data_grid will return zero for outputs in static data case
+        # ## Hard code box dim'ns for debugging
+        # options.numtestperdim = 22
+        # options.queryleftbound = -750
+        # options.queryrightbound = 750
+
+        # ## make_test_data_grid will return zero for outputs in static data case
         # data_test_inputs, data_test_outputs = make_test_data_grid(rng)
         
-        ## for debugging
+        ##############
+        ## alternative 2: use randomly drawn query points 
+        ##############
+
+        ## Hard code box dim'ns for debugging
+        options.numtestperdim = 7
+        options.queryleftbound = -1000
+        options.queryrightbound = 1000
+
+        ## same query points each time
+        rng_for_query_draw_only = np.random.default_rng(67890) # always use seed 67890; should not see other rngs
+        options.numtestperbox = 5000
+        rand_pts_for_query = rng_for_query_draw_only.random((options.numtestperbox, options.dim))
+        
+        query_box_scale_vector = np.full(options.dim, (options.queryrightbound - options.queryleftbound) )
+        query_box_shift_vector = np.full(options.dim, options.queryleftbound)
+        # do scaling in each dim first
+        for i in range(options.dim):
+            rand_pts_for_query[:,i] *= query_box_scale_vector[i]
+        # then do shifts
+        for i in range(options.dim):
+            rand_pts_for_query[:,i] += query_box_shift_vector[i]
+
+        data_test_inputs  = pd.DataFrame(rand_pts_for_query)
+        data_test_outputs = pd.DataFrame(np.zeros(options.numtestperbox))  # intentionally zeros df
+        
+        ##############
+        ## printing and viz for debugging
+        ##############
         # print("\ndata train in  = \n", data_train_inputs)
         # print("\ndata train out = \n", data_train_outputs)
         # print("\ndata test  in  = \n", data_test_inputs)
@@ -569,6 +610,12 @@ if __name__ == '__main__':
         # viz_only_3D(data_test_inputs[0].to_numpy(), data_test_inputs[1].to_numpy(), data_test_outputs.to_numpy())
         # viz_only_both(data_train_inputs[0].to_numpy(), data_train_inputs[1].to_numpy(), data_test_inputs[0].to_numpy(), data_test_inputs[1].to_numpy())
         # exit()
+
+
+    ########################################################################
+    # set up variables for iterative rate check
+    #######################################################################
+
 
     if options.infile is None:
         outfname = 'zz-' + str(options.jobid) + "-" + str(options.fn_name) + "-d" + str(options.dim) + "-tpd" + str(options.numtestperdim) + "-lb" + str(options.bboxleftbound) + "-rb" + str(options.bboxrightbound) + "-tb" + str(options.tb_scale) + "-log" + str(options.log_base) +".csv"
@@ -584,6 +631,32 @@ if __name__ == '__main__':
     results_df = []
     all_pts_in  = copy.deepcopy(data_train_inputs)
     all_pts_out = copy.deepcopy(data_train_outputs)
+
+    ########################################################################
+    # compute gradient at each training point, dropping out one at a time.  
+    # probably EXTREMELY SLOW - just testing for now
+    #######################################################################
+
+
+    # if options.infile is not None: 
+    print("\n==> Starting computation of gradients using one-at-a-time drop out\n")
+    for i in range(all_pts_in.shape[0]):
+        notrowi_in = all_pts_in.drop([i])
+        notrowi_out = all_pts_out.drop([i])
+        onlyi_in = all_pts_in.iloc[i]
+        onlyi_out = all_pts_out.iloc[i]
+        interp_out_n, actual_test_vals, actual_train_vals, extrap_indices, grad_est_DS = compute_DS_only(notrowi_in, notrowi_out, onlyi_in, onlyi_out)
+        if i % 100 == 0:
+            print(extrap_indices, grad_est_DS)
+
+    print("\n==> Done computing gradient approximations.")
+    exit()
+
+    ########################################################################
+    # create list of number of samples for each update step; 
+    #    have to do in advance to avoid rounding issues
+    #    can also help in future applications to know sampling rate calculation a priori
+    #######################################################################
 
     if (options.out_cor == -1): # default
         out_coord = 0 # this means we will only measure error in 0th component of output; no problem if codomain is R^1
@@ -601,12 +674,6 @@ if __name__ == '__main__':
     prev_vals_at_test = []
     prev_extrap_indices = []
     prev_diff = 999999
-
-    ########################################################################
-    # create list of number of samples for each update step; 
-    #    have to do in advance to avoid rounding issues
-    #    can also help in future applications to know sampling rate calculation a priori
-    #######################################################################
 
     quitloop = False
     num_samples_to_add   = np.zeros(options.it_max+1)
@@ -627,7 +694,6 @@ if __name__ == '__main__':
         num_samples_to_add[i]     = int(total_samples_so_far[i+1] - total_samples_so_far[i])
         if (total_samples_so_far[i+1] > options.max_samp):
             quitloop = True
-
 
     ########################################################################
     # do iterative improvement according to upsampling schedule saved in num_samples_to_add

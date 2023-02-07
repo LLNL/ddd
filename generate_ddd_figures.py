@@ -139,23 +139,23 @@ for i in range(2):
     
     ## ax[i].set_xscale('log') # keep commented out; x is already avg samp spacing - don't need to take log
 
-    # if (funcname == 'staticdata' and rate_to_plot == 'grad rate'): 
+    if (funcname == 'staticdata' and rate_to_plot == 'grad rate'): 
         # save grad data
         # if len(x) != 3:
         #     print("*** Had more than 1 rate computation; try a larger initial sample or larger log base. Exiting.")
         #     exit()
         # else: # got exactly one rate computed
         #     print("Here's the data:")
-        #     print(merged_df)
-        #     print("x\n",x)
-        #     print("len x = ", len(x))
-        #     print("y\n",y)
-        #     # print("y_10\n",y_10)
-        #     # print("y_25\n",y_25)
-        #     # print("y_75\n",y_75)
-        #     # print("y_90\n",y_90)
-        #     boxdata = np.array([x[0],y_10[0], y_25[0], y[0], y_75[0], y_90[0]])
-        #     print("boxdata\n", boxdata)
+            print(merged_df)
+            print("x\n",x.to_numpy())
+            print("len x = ", len(x))
+            print("y\n",y)
+            # print("y_10\n",y_10)
+            # print("y_25\n",y_25)
+            # print("y_75\n",y_75)
+            # print("y_90\n",y_90)
+            boxdata = np.array([x[0],y_10[0], y_25[0], y[0], y_75[0], y_90[0]])
+            print("boxdata\n", boxdata)
 
     # draw zoom breaks
     for zb in zoom_breaks:
