@@ -634,23 +634,23 @@ if __name__ == '__main__':
 
     ########################################################################
     # compute gradient at each training point, dropping out one at a time.  
-    # probably EXTREMELY SLOW - just testing for now
+    # probably very slow - just testing for now
     #######################################################################
 
 
-    # if options.infile is not None: 
-    print("\n==> Starting computation of gradients using one-at-a-time drop out\n")
-    for i in range(all_pts_in.shape[0]):
-        notrowi_in = all_pts_in.drop([i])
-        notrowi_out = all_pts_out.drop([i])
-        onlyi_in = all_pts_in.iloc[i]
-        onlyi_out = all_pts_out.iloc[i]
-        interp_out_n, actual_test_vals, actual_train_vals, extrap_indices, grad_est_DS = compute_DS_only(notrowi_in, notrowi_out, onlyi_in, onlyi_out)
-        if i % 100 == 0:
-            print(extrap_indices, grad_est_DS)
+    # # if options.infile is not None: 
+    # print("\n==> Starting computation of gradients using one-at-a-time drop out\n")
+    # for i in range(all_pts_in.shape[0]):
+    #     notrowi_in = all_pts_in.drop([i])
+    #     notrowi_out = all_pts_out.drop([i])
+    #     onlyi_in = all_pts_in.iloc[i]
+    #     onlyi_out = all_pts_out.iloc[i]
+    #     interp_out_n, actual_test_vals, actual_train_vals, extrap_indices, grad_est_DS = compute_DS_only(notrowi_in, notrowi_out, onlyi_in, onlyi_out)
+    #     if i % 100 == 0:
+    #         print(extrap_indices, grad_est_DS)
 
-    print("\n==> Done computing gradient approximations.")
-    exit()
+    # print("\n==> Done computing gradient approximations.")
+    # exit()
 
     ########################################################################
     # create list of number of samples for each update step; 
