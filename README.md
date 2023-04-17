@@ -1,6 +1,6 @@
 Delaunay Density Diagnostic
 ----------------
-   Version 1.0, March 2022
+   Version 1.1, April 2023
 
    This code implements algorithms described in:\
    **Data-driven geometric scale detection via Delaunay interpolation**\
@@ -37,7 +37,7 @@ Usage
    ~~~~
    Successful installation will include the creation of a shared object file `delsparse_clib.so` in the `DelaunaySparse/python` subfolder.
 
-3. Once DelaunaySparse is successfully installed, copy `delsparse.py` and `delsparse_clib.so` from the `DelaunaySparse/python` subfolder into the `ddd` repository:
+3. Once DelaunaySparse is successfully installed, copy `delsparse.py` and `delsparse_clib.so` from the `DelaunaySparse/python` subfolder into the `ddd` repository.  Note: a copy of `deslparse.py` is provided with the repository for reference.
     ~~~~
    cd [path to ddd repo]/ddd
    cp [path to DelaunaySparse repo]/DelaunaySparse/python/delsparse.py .
@@ -50,7 +50,8 @@ Usage
    ~~~~
    The above script will run a total of 100 trials of the `delaunay_density_diagnostic.py` script,
       save the results as `.csv` files, then call `generate_ddd_figures.py`
-      to generate a `.png` figure.  Details can be found in the header of  `run_ddd_trials.sh`.
+      to generate a `.png` figure called `ddd-figure.png`.  A copy of the figure is provided
+      with the repository. Details can be found in the header of  `run_ddd_trials.sh`.
 
 5. If the figure generates correctly, run
    ~~~~
