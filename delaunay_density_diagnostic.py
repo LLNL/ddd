@@ -492,7 +492,7 @@ if __name__ == '__main__':
                 grad_diff_rate = 0
                 grad_prev_diff = 0
         elif (i == 1):
-            new_vs_prev_at_test = np.sqrt(((interp_out_n[out_coord,:]-prev_vals_at_test[out_coord,:]) ** 2).mean()) 
+            new_vs_prev_at_test = np.sqrt(((interp_out_n[out_coord,:]-prev_vals_at_test[out_coord,:]) ** 2).mean())
             diff_rate = 0
             prev_diff = new_vs_prev_at_test
             if (options.computeGrad):
