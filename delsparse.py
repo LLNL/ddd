@@ -177,7 +177,7 @@ def delaunaysparses(d, n, pts, m, q, simps, weights, ierr, interp_in=None, inter
 !    weights are returned.
 !
 ! INTERP_OUT(1:IR,1:M) contains real valued response vectors for each
-!    interpolation point in Q on output. The first dimension of INTERP_OUT
+!    interpolation point in Q on output. The first dimension of INTERP_OU
 !    must match the first dimension of INTERP_IN, and the second dimension
 !    must match M. If present, the response values at each interpolation
 !    point are computed as a convex combination of the response values
