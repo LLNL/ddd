@@ -4,7 +4,7 @@
 #   as described in the paper
 #   Data-driven geometric scale detection via Delaunay interpolation
 #   by Andrew Gillette and Eugene Kur
-#   Version 1.0, March 2022
+#   Version 1.1, April 2023
 #
 # For usage information, run:
 # python delaunay_density_diagnostic.py --help

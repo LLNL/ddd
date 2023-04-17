@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 from matplotlib import colors
 from matplotlib.pyplot import cm
+import subprocess
+
 
 import sys
 try:
@@ -88,7 +90,7 @@ for i in range(2):
     # ir_5per   =dfsub.groupby('avg samp spacing').quantile(q=.05).rename(columns={"iterate rate norm inside": "ir_5per"})
     # ir_95per  =dfsub.groupby('avg samp spacing').quantile(q=.95).rename(columns={"iterate rate norm inside": "ir_95per"})
     
-    groupP=dfsub.groupby('avg samp spacing')
+    groupP = dfsub.groupby('avg samp spacing')
     #groupby attributes
     ir_mean        =groupP.mean().rename(columns={rate_to_plot: "ir_mean"})
     ir_25per       =groupP.quantile(q=.25).rename(columns={rate_to_plot: "ir_25per"})
@@ -157,7 +159,8 @@ for i in range(2):
 
 plt.subplots_adjust(left=0.05, right=0.95, top=0.9, bottom=0.05)
 
-
-plt.savefig('ddd-figure.png',format='png', bbox_inches='tight')
-plt.show()
+figname = 'ddd-figure.png'
+plt.savefig(figname,format='png', bbox_inches='tight')
+# plt.show()
 print("==> Saved figure as ddd-figure.png")
+subprocess.call(["open", figname])
