@@ -7,7 +7,7 @@ import pandas as pd
 from matplotlib import colors
 from matplotlib.pyplot import cm
 import subprocess
-   
+
 
 import sys
 try:
@@ -20,7 +20,7 @@ except ValueError as err:
     print("Illegal value in argument: {0}".format(err))
     sys.exit(1)
 
-min_density = 0 # 50 for original Griewank example
+min_density = 50
 
 from functools import reduce
 
@@ -136,27 +136,8 @@ for i in range(2):
     # ax[i].legend([l_target,l_mean,l_75,l_90],['target rate','mean','inter-quartile range','inter-decile range'],loc=3)
     # ax[i].legend([l_target,l_mean,l_75,l_noise],['target rate','mean','inter-quartile range','noise-only rate'],prop={'size': 12},loc=3)
     # ax[i].legend([l_target,l_noise,l_mean,l_75,l_90],['recoverable features','noisy features','mean rate','inter-quartile range','inter-decile range'],loc=7)
+    ax[i].set_xscale('log')
     
-    ## ax[i].set_xscale('log') # keep commented out; x is already avg samp spacing - don't need to take log
-
-    if (funcname == 'staticdata' and rate_to_plot == 'grad rate'): 
-        # save grad data
-        # if len(x) != 3:
-        #     print("*** Had more than 1 rate computation; try a larger initial sample or larger log base. Exiting.")
-        #     exit()
-        # else: # got exactly one rate computed
-        #     print("Here's the data:")
-            print(merged_df)
-            print("x\n",x.to_numpy())
-            print("len x = ", len(x))
-            print("y\n",y)
-            # print("y_10\n",y_10)
-            # print("y_25\n",y_25)
-            # print("y_75\n",y_75)
-            # print("y_90\n",y_90)
-            boxdata = np.array([x[0],y_10[0], y_25[0], y[0], y_75[0], y_90[0]])
-            print("boxdata\n", boxdata)
-
     # draw zoom breaks
     for zb in zoom_breaks:
         ax[i].axvline(x=zb)  
