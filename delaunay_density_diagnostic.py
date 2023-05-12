@@ -650,7 +650,7 @@ if __name__ == '__main__':
             print(extrap_indices, grad_est_DS)
 
     print("\n==> Done computing gradient approximations.")
-    exit()
+
 
     ########################################################################
     # create list of number of samples for each update step; 
