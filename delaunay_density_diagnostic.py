@@ -574,9 +574,10 @@ if __name__ == '__main__':
         ##########################################
         # update sample set for next iteration
         ##########################################
-        all_pts_in  = all_pts_in.append(new_sample_inputs)
-        all_pts_out = all_pts_out.append(new_sample_outputs)
 
+        all_pts_in = pd.concat([all_pts_in, new_sample_inputs])
+        all_pts_out = pd.concat([all_pts_out, new_sample_outputs])
+        
         columns = [ "dim of intput"    ,
                     "function name"    ,
                     "num test points"  ,
