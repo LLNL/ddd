@@ -1,6 +1,6 @@
 Delaunay Density Diagnostic
 ----------------
-   Version 1.1, April 2023
+   Version 1.2, May 2023
 
    This code implements algorithms described in:\
    **Data-driven geometric scale detection via Delaunay interpolation**\
@@ -11,55 +11,40 @@ Delaunay Density Diagnostic
 Usage
 ----------------
 
-1. Clone the DelaunaySparse repository:
-   ~~~~
-   git clone https://github.com/vtopt/DelaunaySparse.git
-   ~~~~
-2. Install the DelaunaySparse software.  \
-   The software may be able to self-install with the included python bindings.  Try:
-   ~~~~
-   cd [directory with DelaunaySparse repository]/DelaunaySparse/python
-   python example.py
-   ~~~~
-   If not, try:
-   ~~~~
-   cd ../src
-   make
-   ~~~~
-   to troubleshoot the compilation of DelaunaySparse.  
-   MacOS users who encounter the error `ld: library not found for -lSystem` may wish to try:
-   ~~~~
-   xcode-select --install
-   ~~~~
-   to update the command line tools required for installation.  In addition, it may be necessary to run the following before compiling:
-   ~~~~
-   export LIBRARY_PATH="$LIBRARY_PATH:/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
-   ~~~~
-   Successful installation will include the creation of a shared object file `delsparse_clib.so` in the `DelaunaySparse/python` subfolder.
+1. Activate a python environment that includes the packages listed in the REQUIREMENTS.txt file.  
 
-3. Once DelaunaySparse is successfully installed, copy `delsparse.py` and `delsparse_clib.so` from the `DelaunaySparse/python` subfolder into the `ddd` repository.  Note: a copy of `deslparse.py` is provided with the repository for reference.
-    ~~~~
-   cd [path to ddd repo]/ddd
-   cp [path to DelaunaySparse repo]/DelaunaySparse/python/delsparse.py .
-   cp [path to DelaunaySparse repo]/DelaunaySparse/python/delsparse_clib.so .
-   ~~~~
+2. Ensure that the `gfortran` compiler is installed.
 
-4. Run the driver script:
+3. Run the driver script:
    ~~~~
-   ./run_ddd_trials.sh
+   python run_ddd_trials.py
    ~~~~
    The above script will run a total of 100 trials of the `delaunay_density_diagnostic.py` script,
       save the results as `.csv` files, then call `generate_ddd_figures.py`
       to generate a `.png` figure called `ddd-figure.png`.  A copy of the figure is provided
-      with the repository. Details can be found in the header of  `run_ddd_trials.sh`.
+      with the repository. Details can be found in the header of  `run_ddd_trials.py`.
 
-5. If the figure generates correctly, run
+   A typical run time for a single trial is a few seconds, so the whole script should complete
+      in 5-10 minutes.
+
+4. If the figure generates correctly, run
    ~~~~
    python delaunay_density_diagnostic.py --help
    ~~~~
    to see the command line options that can be added to the driver script for
    user-specified experiments.
 
+Debugging notes
+----------------
+
+The package includes source files in Fortran that impmlement a version of TOMS Algorithm 1012:
+DELAUNAYSPARSE.  This version that has been updated from the original submission to more easily allow python wrapping.  Running the script `delaunay_density_diagnostic.py` will compile the relevant files using `gfortran`.  
+
+During compiling, this type of warning may occur:
+~~~~
+Warning: Rank mismatch between actual argument at (1) and actual argument at (2)
+~~~~
+This warning is issued by the `slatec` library that is included with the DELAUNAYSPARSE source code and is not easily supprssed.  However, this warning is only due to a change in Fortran conventions since the original publication of TOMS 1012 and does not cause any issues in regards to the results.
 
 Authors
 ----------------
