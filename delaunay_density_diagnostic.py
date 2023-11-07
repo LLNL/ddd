@@ -2,9 +2,11 @@
 #
 # Delaunay density diangostic for MSD and grad-MSD rates
 #   as described in the paper
-#   Data-driven geometric scale detection via Delaunay interpolation
+#   Algorithm XXXX: The Delaunay Density Diagnostic
+#       under review at ACM Transactions on Mathematical Software
+#       (original title: Data-driven geometric scale detection via Delaunay interpolation)
 #   by Andrew Gillette and Eugene Kur
-#   Version 1.1, April 2023
+#   Version 2.0, November 2023
 #
 # For usage information, run:
 # python delaunay_density_diagnostic.py --help
@@ -289,6 +291,9 @@ if __name__ == '__main__':
     parser = OptionParser(usage)
     parser.add_option( "--jobid", help="Job ID.", 
         dest="jobid", type=int, default=999999)   
+    parser.add_option( "--staticdatapath", help="Path to static data set from which samples will be drawn." +
+        "If no path is provided, code uses --fn option to sample data.", 
+        dest="data_path", type=str, default=None)  
     parser.add_option( "--fn", help="Test function to use.  Version 1.0 of the code only supports the Griewank function.  " +
         "It is possible to code in additional functions by modifying the definition of tf(X).", 
         dest="fn_name", type=str, default="griewank")  
