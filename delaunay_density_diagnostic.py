@@ -342,35 +342,47 @@ if __name__ == '__main__':
     def echo_options(options):
         print("Selected options:")
         print()
-        print("Job ID:      ", options.jobid) 
-        print("Function:    ", options.fn_name)
-        print("Dimension:   ", options.dim)
-        print()
-        print("Query points per dim:", options.numtestperdim)
-        print("Total number of query points:", options.numtestperdim ** options.dim)
 
-        # Set bounding box left/right bounds based on zoom center, zoom exponent, and scale factor qpdf
-        options.bboxleftbound  = np.round(options.zoom_ctr - (10 ** (options.zoom_exp))/options.tb_scale,2)
-        options.bboxrightbound = np.round(options.zoom_ctr + (10 ** (options.zoom_exp))/options.tb_scale,2)
+        if options.data_path == None:
 
-        # Set query lattice left/right bounds based on bounding box bounds and scale factor qpdf
-        tg_scale_fac = (1.0-options.tb_scale)/2
-        interval_width = options.bboxrightbound - options.bboxleftbound
-        options.queryleftbound  = options.bboxleftbound  + tg_scale_fac * interval_width
-        options.queryrightbound = options.bboxrightbound - tg_scale_fac * interval_width
+            print("Job ID:      ", options.jobid) 
+            print("Function:    ", options.fn_name)
+            print("Dimension:   ", options.dim)
+            print()
+            print("Query points per dim:", options.numtestperdim)
+            print("Total number of query points:", options.numtestperdim ** options.dim)
 
-        print("Query point bounds in each dim: ", "[", options.queryleftbound, ", ", options.queryrightbound, "]")
-        print("Query points dimension fraction (qpdf): ", options.tb_scale)
-        print("Bounding box bounds in each dim: ", "[", options.bboxleftbound, ", ", options.bboxrightbound, "]")
-        print()
-        print("Initial sample size:", options.numtrainpts)
-        print("Maximum sample size:", options.max_samp)
-        print("Upsampling factor b: ", options.log_base)
-        print()
-        print("Global seed for randomization: ", options.spec_seed)
-        print("Using gradients? : ", options.computeGrad)
-        print("Extrapolation threshold: ", options.extrap_thresh)
-        # print("Output cor : ", options.out_cor)
+            # Set bounding box left/right bounds based on zoom center, zoom exponent, and scale factor qpdf
+            options.bboxleftbound  = np.round(options.zoom_ctr - (10 ** (options.zoom_exp))/options.tb_scale,2)
+            options.bboxrightbound = np.round(options.zoom_ctr + (10 ** (options.zoom_exp))/options.tb_scale,2)
+
+            # Set query lattice left/right bounds based on bounding box bounds and scale factor qpdf
+            tg_scale_fac = (1.0-options.tb_scale)/2
+            interval_width = options.bboxrightbound - options.bboxleftbound
+            options.queryleftbound  = options.bboxleftbound  + tg_scale_fac * interval_width
+            options.queryrightbound = options.bboxrightbound - tg_scale_fac * interval_width
+
+            print("Query point bounds in each dim: ", "[", options.queryleftbound, ", ", options.queryrightbound, "]")
+            print("Query points dimension fraction (qpdf): ", options.tb_scale)
+            print("Bounding box bounds in each dim: ", "[", options.bboxleftbound, ", ", options.bboxrightbound, "]")
+            print()
+            print("Initial sample size:", options.numtrainpts)
+            print("Maximum sample size:", options.max_samp)
+            print("Upsampling factor b: ", options.log_base)
+            print()
+            print("Global seed for randomization: ", options.spec_seed)
+            print("Using gradients? : ", options.computeGrad)
+            print("Extrapolation threshold: ", options.extrap_thresh)
+            # print("Output cor : ", options.out_cor)
+            if (options.fn_name != 'griewank'):
+                print("==> ERROR: Requested function ", options.fn_name)
+                print("Only the function 'griewank' is supported by this version of the code.")
+                exit()
+        
+        else: # static data path provided
+            print("Path to static data: ", options.data_path)
+            options.fn_name = 'static'
+            exit()
         print()
         
         if (options.bboxrightbound <= options.bboxleftbound):
@@ -389,10 +401,6 @@ if __name__ == '__main__':
         if (options.extrap_thresh < 0 or options.extrap_thresh > 0.5):
             print()
             print("==> Set extrapolation threshold in [0,0.5]")
-            exit()
-        if (options.fn_name != 'griewank'):
-            print("==> ERROR: Requested function ", options.fn_name)
-            print("Only the function 'griewank' is supported by this version of the code.")
             exit()
 
     echo_options(options)
