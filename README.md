@@ -1,9 +1,11 @@
 Delaunay Density Diagnostic
 ----------------
-   Version 1.2, May 2023
+   Version 2.0, November 2023
 
    This code implements algorithms described in:\
-   **Data-driven geometric scale detection via Delaunay interpolation**\
+   **Algorithm XXXX: The Delaunay Density Diagnostic**\
+   under review at ACM Transactions on Mathematical Software\
+   original title: ``Data-driven geometric scale detection via Delaunay interpolation''
    Andrew Gillette and Eugene Kur, 2022 \
    https://arxiv.org/abs/2203.05685
 
