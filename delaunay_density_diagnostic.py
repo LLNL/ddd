@@ -342,10 +342,12 @@ if __name__ == '__main__':
     def echo_options(options):
         print("Selected options:")
         print()
+        print("Job ID:      ", options.jobid) 
+        print("Global seed for randomization: ", options.spec_seed)
+        print()
 
-        if options.data_path == None:
-
-            print("Job ID:      ", options.jobid) 
+        full_dataset = []
+        if options.data_path == None: # use test function to acquire new data
             print("Function:    ", options.fn_name)
             print("Dimension:   ", options.dim)
             print()
@@ -370,7 +372,6 @@ if __name__ == '__main__':
             print("Maximum sample size:", options.max_samp)
             print("Upsampling factor b: ", options.log_base)
             print()
-            print("Global seed for randomization: ", options.spec_seed)
             print("Using gradients? : ", options.computeGrad)
             print("Extrapolation threshold: ", options.extrap_thresh)
             # print("Output cor : ", options.out_cor)
@@ -382,20 +383,7 @@ if __name__ == '__main__':
         else: # static data path provided
             print("Path to static data: ", options.data_path)
             options.fn_name = 'static'
-            try:
-                df = pd.read_csv(options.data_path, header=None, index_col=None)
-                dfrowct = df.shape[0]
-                dfcolct = df.shape[1]
-                print("Read in data from path.  Interpreted as",dfrowct,"points in R^",dfcolct-1,"with one output value per point.")
-            except:
-                print("\n Error reading in data.  To debug, check that:",
-                        "\n  (1) path printed above is correct and",
-                        "\n  (2) file is .csv of numerical data where each row is",
-                        "the input coordinates followed by 1 output."
-                        "\n  (3) sample files from ddd/staticdata/examples/ load sucessfully")
-                exit()
-            # print(df)
-            exit()
+
         print()
         
         if (options.bboxrightbound <= options.bboxleftbound):
@@ -423,10 +411,41 @@ if __name__ == '__main__':
 
     # torch.manual_seed(globalseed)
 
-    data_train_inputs, data_train_outputs = make_random_training_in_box(rng)
-    
-    data_test_inputs, data_test_outputs = make_test_data_grid(rng)
-
+    if options.data_path == None: # use test function to acquire new data
+        data_train_inputs, data_train_outputs = make_random_training_in_box(rng)    
+        data_test_inputs, data_test_outputs = make_test_data_grid(rng)
+    else:
+        try:
+            full_dataset = pd.read_csv(options.data_path, header=None, index_col=None)
+            dfrowct = full_dataset.shape[0]
+            dfcolct = full_dataset.shape[1]
+            print("Read in data from path.  Interpreted as",dfrowct,"points in R^",dfcolct-1,"with one output value per point.\n")
+            options.dim = dfcolct-1
+            print("Setting dimension =",dfcolct-1)
+        except:
+            print("\n Error reading in data.  To debug, check that:",
+                    "\n  (1) path printed above is correct and",
+                    "\n  (2) file is .csv of numerical data where each row is",
+                    "the input coordinates followed by 1 output."
+                    "\n  (3) sample files from ddd/staticdata/examples/ load sucessfully")
+            exit()
+        ########################
+        # shuffle dataset
+        ########################
+        shuffle_seed = rng.integers(low=0, high=1_000_000, size=1)
+        shuffle_seed = shuffle_seed[0] # converts array of size 1 to an integer
+        full_dataset = full_dataset.sample(frac=1, random_state=shuffle_seed).reset_index(drop=True)
+        print("==> Shuffled dataset based on provided seed.")
+        ########################
+        # get initial sample
+        ########################
+        data_train_inputs  = full_dataset.iloc[:, :-1]  # inputs  = all but last column
+        data_train_outputs = full_dataset.iloc[:, -1:]  # outputs = last column
+        # make test grid here
+        print("dti shape=",data_train_inputs.shape)
+        print("dto shape=",data_train_outputs.shape)
+        print("Copy in quartile based gridding")
+        exit()
     
     outfname = 'zz-' + str(options.jobid) + "-" + str(options.fn_name) + "-d" + str(options.dim) + "-tpd" + str(options.numtestperdim) + "-lb" + str(options.bboxleftbound) + "-rb" + str(options.bboxrightbound) + "-tb" + str(options.tb_scale) + "-log" + str(options.log_base) +".csv"
     if (options.zoom_ctr != 999.0 and options.zoom_exp != 999.0): # add in -zoom[exponent value] before csv
