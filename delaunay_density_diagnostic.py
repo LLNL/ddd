@@ -382,6 +382,19 @@ if __name__ == '__main__':
         else: # static data path provided
             print("Path to static data: ", options.data_path)
             options.fn_name = 'static'
+            try:
+                df = pd.read_csv(options.data_path, header=None, index_col=None)
+                dfrowct = df.shape[0]
+                dfcolct = df.shape[1]
+                print("Read in data from path.  Interpreted as",dfrowct,"points in R^",dfcolct-1,"with one output value per point.")
+            except:
+                print("\n Error reading in data.  To debug, check that:",
+                        "\n  (1) path printed above is correct and",
+                        "\n  (2) file is .csv of numerical data where each row is",
+                        "the input coordinates followed by 1 output."
+                        "\n  (3) sample files from ddd/staticdata/examples/ load sucessfully")
+                exit()
+            # print(df)
             exit()
         print()
         
