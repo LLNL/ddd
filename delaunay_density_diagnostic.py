@@ -346,7 +346,6 @@ if __name__ == '__main__':
         print("Global seed for randomization: ", options.spec_seed)
         print()
 
-        full_dataset = []
         if options.data_path == None: # use test function to acquire new data
             print("Function:    ", options.fn_name)
             print("Dimension:   ", options.dim)
@@ -383,6 +382,8 @@ if __name__ == '__main__':
         else: # static data path provided
             print("Path to static data: ", options.data_path)
             options.fn_name = 'static'
+            options.zoom_ctr = 999.0
+            options.zoom_exp = 999.0
 
         print()
         
@@ -421,7 +422,11 @@ if __name__ == '__main__':
             dfcolct = full_dataset.shape[1]
             print("Read in data from path.  Interpreted as",dfrowct,"points in R^",dfcolct-1,"with one output value per point.\n")
             options.dim = dfcolct-1
-            print("Setting dimension =",dfcolct-1)
+            print("Setting dimension =",dfcolct-1,"\n")
+            print("Initial sample size:", options.numtrainpts)
+            print("Query points per dim:", options.numtestperdim)
+            print("Total number of query points:", options.numtestperdim ** options.dim)
+            print("Upsampling factor b: ", options.log_base)
         except:
             print("\n Error reading in data.  To debug, check that:",
                     "\n  (1) path printed above is correct and",
@@ -430,29 +435,67 @@ if __name__ == '__main__':
                     "\n  (3) sample files from ddd/staticdata/examples/ load sucessfully")
             exit()
         ########################
-        # shuffle dataset
+        # shuffle dataset and make input/output datasets
         ########################
         shuffle_seed = rng.integers(low=0, high=1_000_000, size=1)
         shuffle_seed = shuffle_seed[0] # converts array of size 1 to an integer
         full_dataset = full_dataset.sample(frac=1, random_state=shuffle_seed).reset_index(drop=True)
         print("==> Shuffled dataset based on provided seed.")
+        full_dataset_inputs = full_dataset.iloc[:,0:options.dim]  # inputs  = all but last column
+        full_dataset_outputs = full_dataset.iloc[:,-1:] # outputs = last column
+
         ########################
-        # get initial sample
+        # create first batch of sample points 
         ########################
-        data_train_inputs  = full_dataset.iloc[:, :-1]  # inputs  = all but last column
-        data_train_outputs = full_dataset.iloc[:, -1:]  # outputs = last column
-        # make test grid here
-        print("dti shape=",data_train_inputs.shape)
-        print("dto shape=",data_train_outputs.shape)
-        print("Copy in quartile based gridding")
-        exit()
+        data_train_inputs  = full_dataset_inputs.iloc[0:options.numtrainpts, :]  
+        data_train_outputs = full_dataset_outputs.iloc[0:options.numtrainpts, :]  
+        
+        ########################
+        # create grid of query points by looking at percentiles of full data set
+        ########################
+
+        cols = full_dataset_inputs.columns
+        num_cols = len(cols)
+        
+        x = np.zeros([num_cols, options.numtestperdim])
+
+        print("==> Description of full dataset:")
+        print(full_dataset_inputs.describe())
+        
+        print("\n==> Setting grid of query points from 25th - 75th percentile")
+        i = 0
+        for col in cols: 
+            # set coordinate mins and maxes according to 25-75 percentiles
+            cor_min = full_dataset_inputs.quantile(q=0.25)[col]
+            cor_max = full_dataset_inputs.quantile(q=0.75)[col]
+            x[i] = np.linspace(cor_min, cor_max, options.numtestperdim)
+            i += 1
+
+        mg_in = []
+        for i in range(num_cols):
+            mg_in.append(x[i])
+        grid_pts = np.array(np.meshgrid(*mg_in))
+        grid_pts = grid_pts.reshape(options.dim, options.numtestperdim ** options.dim)
+        grid_pts = grid_pts.T
+
+        outputs_on_grid = []
+        data_test_inputs  = pd.DataFrame(grid_pts)
+        data_test_outputs = pd.DataFrame(outputs_on_grid)  # intentionally empty df
+        print("==> Query point grid has",data_test_inputs.shape[0],"points in R^",data_test_inputs.shape[1])
+
+    # end else; now data_{train,test}_{inputs,outputs} are set in either case
     
-    outfname = 'zz-' + str(options.jobid) + "-" + str(options.fn_name) + "-d" + str(options.dim) + "-tpd" + str(options.numtestperdim) + "-lb" + str(options.bboxleftbound) + "-rb" + str(options.bboxrightbound) + "-tb" + str(options.tb_scale) + "-log" + str(options.log_base) +".csv"
-    if (options.zoom_ctr != 999.0 and options.zoom_exp != 999.0): # add in -zoom[exponent value] before csv
-        outfname = outfname[:-4] + "-zoom" + str(options.zoom_exp) + ".csv"
-    if (options.spec_seed != 0): # add in -seed[seed value] before csv
-        outfname = outfname[:-4] + "-seed" + str(options.spec_seed) + ".csv"
-    print("===> Output will be stored in file ",outfname)
+    if options.data_path == None: # use test function to acquire new data
+        outfname = 'zz-' + str(options.jobid) + "-" + str(options.fn_name) + "-d" + str(options.dim) + "-tpd" + str(options.numtestperdim) + "-lb" + str(options.bboxleftbound) + "-rb" + str(options.bboxrightbound) + "-tb" + str(options.tb_scale) + "-log" + str(options.log_base) +".csv"
+        if (options.zoom_ctr != 999.0 and options.zoom_exp != 999.0): # add in -zoom[exponent value] before csv
+            outfname = outfname[:-4] + "-zoom" + str(options.zoom_exp) + ".csv"
+        if (options.spec_seed != 0): # add in -seed[seed value] before csv
+            outfname = outfname[:-4] + "-seed" + str(options.spec_seed) + ".csv"
+    else:
+        outfname = 'zz-' + str(options.jobid) + "-" + str(options.fn_name) + "-d" + str(options.dim) + "-tpd" + str(options.numtestperdim) + "-lb25pct" + "-rb75pct" + "-tb" + str(options.tb_scale) + "-log" + str(options.log_base) +".csv"
+        if (options.spec_seed != 0): # add in -seed[seed value] before csv
+            outfname = outfname[:-4] + "-seed" + str(options.spec_seed) + ".csv"
+    print("==> Output will be stored in file ",outfname)
 
     results_df = []
     all_pts_in  = copy.deepcopy(data_train_inputs)
@@ -518,14 +561,17 @@ if __name__ == '__main__':
         # print('====> proportion extrapolated = %1.2f' % prop_extrap_iterate)
         density_of_sample = all_pts_in.shape[0] ** (1/options.dim)
 
-
-        # for analytical functions, we can compute the "actual" rate of convergence, for reference
-        ds_vs_actual_at_test = np.sqrt(((interp_out_n[out_coord,:]-actual_test_vals[out_coord,:]) ** 2).mean())
-        if (i == 0): 
+        if options.data_path == None: # use test function to acquire new data 
+            # for analytical functions, we can compute the "actual" rate of convergence, for reference
+            ds_vs_actual_at_test = np.sqrt(((interp_out_n[out_coord,:]-actual_test_vals[out_coord,:]) ** 2).mean())
+            if (i == 0): 
+                error_rate = 0
+            else:
+                error_rate =  (np.log(prev_error/ds_vs_actual_at_test))/np.log(options.log_base)
+        else: # have static data; actual_test_vals = [] which causes an error below
+            actual_test_vals = np.zeros_like(interp_out_n)
+            ds_vs_actual_at_test = 0
             error_rate = 0
-        else:
-            error_rate =  (np.log(prev_error/ds_vs_actual_at_test))/np.log(options.log_base)
-
 
         # difference and rate computation steps for Algorithms 3.1 and 3.2
         if (i == 0):
@@ -613,8 +659,14 @@ if __name__ == '__main__':
             options.numtrainpts = 1
             quitloop = True
 
-        new_sample_inputs, new_sample_outputs = make_random_training_in_box(rng)
-            
+        if options.data_path == None: # use test function to acquire new data 
+            new_sample_inputs, new_sample_outputs = make_random_training_in_box(rng)
+        else: # have static data set
+            start = int(total_samples_so_far[i])                        # index to start next sample batch
+            stop  = int(total_samples_so_far[i]) + options.numtrainpts  # index to end   next sample batch
+            new_sample_inputs  = full_dataset.iloc[start:stop, 0:options.dim]
+            new_sample_outputs = full_dataset.iloc[start:stop,-1:] # NOTE: check selection of output coord
+
 
         ##########################################
         # update sample set for next iteration
