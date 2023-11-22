@@ -291,7 +291,7 @@ if __name__ == '__main__':
     parser = OptionParser(usage)
     parser.add_option( "--jobid", help="Job ID.", 
         dest="jobid", type=int, default=999999)   
-    parser.add_option( "--staticdatapath", help="Path to static data set from which samples will be drawn." +
+    parser.add_option( "--staticdatapath", help="Path to static data set from which samples will be drawn. " +
         "If no path is provided, code uses --fn option to sample data.", 
         dest="data_path", type=str, default=None)  
     parser.add_option( "--fn", help="Test function to use.  Version 1.0 of the code only supports the Griewank function.  " +
@@ -410,6 +410,30 @@ if __name__ == '__main__':
     globalseed = options.spec_seed
     rng = np.random.default_rng(globalseed)  
 
+
+    # ## save test function data option:
+    # #
+    # # Randomly sample numtrainpts points 
+    # # Evaluate the given test function on each point
+    # # Save into a file
+    # # Exit
+    # #
+
+    # data_train_inputs, data_train_outputs = make_random_training_in_box(rng)
+    # all_data_train = pd.concat([data_train_inputs, data_train_outputs],axis=1)
+    # outfname = 'temp_generated_data.csv'
+    # all_data_train.to_csv(outfname, index=False, header=False)
+    # # all_data_train.columns = ["x0", "x1", "y"]
+    
+    # print(all_data_train)
+    # print("Saved samples from above dataframe to file", outfname)
+    # print("Exiting.")
+    # exit()
+
+
+
+
+
     # torch.manual_seed(globalseed)
 
     if options.data_path == None: # use test function to acquire new data
@@ -422,6 +446,7 @@ if __name__ == '__main__':
             dfcolct = full_dataset.shape[1]
             print("Read in data from path.  Interpreted as",dfrowct,"points in R^",dfcolct-1,"with one output value per point.\n")
             options.dim = dfcolct-1
+            options.max_samp = dfrowct
             print("Setting dimension =",dfcolct-1,"\n")
             print("Initial sample size:", options.numtrainpts)
             print("Query points per dim:", options.numtestperdim)
@@ -481,7 +506,7 @@ if __name__ == '__main__':
         outputs_on_grid = []
         data_test_inputs  = pd.DataFrame(grid_pts)
         data_test_outputs = pd.DataFrame(outputs_on_grid)  # intentionally empty df
-        print("==> Query point grid has",data_test_inputs.shape[0],"points in R^",data_test_inputs.shape[1])
+        print("==> Query point grid has",data_test_inputs.shape[0],"points in R^"+str(data_test_inputs.shape[1]))
 
     # end else; now data_{train,test}_{inputs,outputs} are set in either case
     
