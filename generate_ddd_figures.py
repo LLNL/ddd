@@ -1,6 +1,7 @@
 
 from matplotlib import pyplot as plt
-from matplotlib.ticker import FormatStrFormatter
+# from matplotlib.ticker import FormatStrFormatter
+from matplotlib.ticker import LogLocator, MaxNLocator, LogFormatter, ScalarFormatter
 import math
 import numpy as np
 import pandas as pd
@@ -136,11 +137,23 @@ for i in range(2):
     # ax[i].legend([l_target,l_mean,l_75,l_90],['target rate','mean','inter-quartile range','inter-decile range'],loc=3)
     # ax[i].legend([l_target,l_mean,l_75,l_noise],['target rate','mean','inter-quartile range','noise-only rate'],prop={'size': 12},loc=3)
     # ax[i].legend([l_target,l_noise,l_mean,l_75,l_90],['recoverable features','noisy features','mean rate','inter-quartile range','inter-decile range'],loc=7)
-    ax[i].set_xscale('log')
+    # ax[i].set_xscale('log')
+
+    ax[i].xaxis.set_major_locator(LogLocator(base=10))
+    ax[i].xaxis.set_major_locator(MaxNLocator(nbins=4))
+    # ax[i].xaxis.set_major_locator(LogLocator(base=10.0, subs=[1.0]))
+    # ax[i].xaxis.set_major_formatter(LogFormatter(labelOnlyBase=False))
+    # ax[i].xaxis.set_major_formatter(ScalarFormatter(useMathText=False))
+    plt.xticks(fontsize=20)
+    plt.yticks(fontsize=20)
+    
+    # print("x=",x)
+    # exit()
     
     # draw zoom breaks
-    for zb in zoom_breaks:
-        ax[i].axvline(x=zb)  
+    if len(zoom_breaks) >1:
+        for zb in zoom_breaks:
+            ax[i].axvline(x=zb)  
 
     if i == 0:
         ax[i].set_ylabel(r'\texttt{MSD} rate', fontsize=24) 
@@ -152,8 +165,6 @@ for i in range(2):
         ax[i].set_yticks([-2,-1,0,1,2])
         ax[i].set_xlabel('average sample spacing', fontsize=24) # L/N^(1/d)
         
-    plt.xticks(fontsize=20)
-    plt.yticks(fontsize=20)
 
 
 
