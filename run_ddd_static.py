@@ -21,24 +21,27 @@ import subprocess
 import os
 import numpy as np
 
-# if any(fname.endswith('.csv') for fname in os.listdir()):
-#     print("==> Current working directory is", os.getcwd())
-#     print("==> Remove all .csv files from current working directory, then run again.")
-#     exit()
+if any(fname.endswith('.csv') for fname in os.listdir()):
+    print("==> Current working directory is", os.getcwd())
+    print("==> Remove all .csv files from current working directory, then run again.")
+    exit()
 
-# jobid = 123456
-# zoomstep = 0.4
-# minzoom = 0.0
-# maxzoom = 4.0
-# numtrials = 10
-# zoomexps = np.linspace(minzoom,maxzoom,num=int(maxzoom/zoomstep))
+if any(fname.endswith('allfiles.multi') for fname in os.listdir()):
+    print("==> Current working directory is", os.getcwd())
+    print("==> Remove allfiles.multi from current working directory, then run again.")
+    exit()
 
-# for zoomexp in zoomexps:
-#     for seed in range(numtrials):
-#         print("\n ==> Starting ddd trial with zoom exponent =",zoomexp, " seed=", seed, "\n")
-#         subprocess.run(["python", "delaunay_density_diagnostic.py", "--jobid", str(jobid), "--seed", str(seed), "--zoomexp", str(zoomexp)])
-#     #
-# #
+jobid = 123456
+numtrials = 10
+# staticdatapath = 'staticdata/examples/data_paraboloid_exp2_10000.csv'
+# staticdatapath = 'staticdata/examples/data_griewank_exp2_10000.csv'
+staticdatapath = 'staticdata/examples/data_griewank_dim5_10000.csv'
+
+for seed in range(numtrials):
+    print("\n ==> Starting ddd for static data =",staticdatapath, " seed=", seed+1, "\n")
+    subprocess.run(["python", "delaunay_density_diagnostic.py", "--jobid", str(jobid),
+                    "--staticdatapath", staticdatapath, "--seed", str(seed+1), "--numtestperdim", str(2)])
+#
 
 allfiles = []
 for x in os.listdir():
