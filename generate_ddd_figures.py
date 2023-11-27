@@ -128,15 +128,21 @@ for i in range(2):
     # Merge them all at once
     merged_df = pd.concat(data_frames, join='outer', axis=1)
 
-    x     = merged_df.index
-
-    y_90  = np.ma.masked_values(merged_df.ir_90per, 0)
-    y_75  = np.ma.masked_values(merged_df.ir_75per, 0)
-    y     = np.ma.masked_values(merged_df.ir_mean , 0)
-    y_25  = np.ma.masked_values(merged_df.ir_25per, 0)
-    y_10  = np.ma.masked_values(merged_df.ir_10per, 0)
+    x = merged_df.index
+    x = x[:-2] 
+    # Note: the largest 2 x values have no associated y-values
+    #       because rates can only be computed starting with the
+    #       third y value; we use [:-2] to omit empty data
+    
+    y_90  = np.ma.masked_values(merged_df.ir_90per, 0)[:-2]
+    y_75  = np.ma.masked_values(merged_df.ir_75per, 0)[:-2]
+    y     = np.ma.masked_values(merged_df.ir_mean , 0)[:-2]
+    y_25  = np.ma.masked_values(merged_df.ir_25per, 0)[:-2]
+    y_10  = np.ma.masked_values(merged_df.ir_10per, 0)[:-2]
 
     
+    
+    print(y)
     if (rate_to_plot == 'grad rate'):
         target     =  1*np.ones_like(x)
         noise_line = -1*np.ones_like(x)
@@ -168,7 +174,7 @@ for i in range(2):
     # exit()
     
     # draw zoom breaks
-    if len(zoom_breaks) >1:
+    if len(zoom_breaks) > 1:
         for zb in zoom_breaks:
             ax[i].axvline(x=zb)  
 
