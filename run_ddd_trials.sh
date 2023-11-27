@@ -32,4 +32,4 @@ for (( i=0; $i<$(bc<<<"$maxzoom/$zoomstep"); i++ )); do
     done
 done
 ls zz-123456*seed*.csv > allfiles.multi
-python generate_ddd_figures.py allfiles.multi
+python generate_ddd_figures.py --infile allfiles.multi --mindens 50

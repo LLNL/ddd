@@ -50,4 +50,4 @@ n_fnames = ["{}\n".format(i) for i in allfiles]
 with open('allfiles.multi', 'w') as fp:
     fp.writelines(n_fnames)
 
-subprocess.run(["python", "generate_ddd_figures.py", "allfiles.multi"])
+subprocess.run(["python", "generate_ddd_figures.py", "--infile", "allfiles.multi", "--mindens", "50"])

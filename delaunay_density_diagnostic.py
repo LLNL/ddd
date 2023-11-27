@@ -51,16 +51,17 @@ from delsparse import delaunaysparsep as dsp
 # Define the test function (hard coded here as the Griewank function)
 #==================================================================================================#
 
-def tf(X): # Griewnak function, arbitrary dimension input
+def tf(X): # Griewank function, arbitrary dimension input
     X = X.T
+
+    # compute and return values from the Griewank function
     term_1 = (1. / 4000.) * sum(X ** 2)
     term_2 = 1.0
     for i, x in enumerate(X):
         term_2 *= np.cos(x) / np.sqrt(i + 1)
-
     return 1. + term_1 - term_2
 
-    # use a paraboloid instead:
+    # # instead, return values from a paraboloid:
     # return (7/20_000) *  ( X[0]**2 + 0.5*(X[1]**2) )
 
 #==================================================================================================#
@@ -411,20 +412,18 @@ if __name__ == '__main__':
     rng = np.random.default_rng(globalseed)  
 
 
-    # ## save test function data option:
-    # #
-    # # Randomly sample numtrainpts points 
-    # # Evaluate the given test function on each point
-    # # Save into a file
-    # # Exit
-    # #
+    ## save test function data option:
+    #
+    # Randomly sample numtrainpts points 
+    # Evaluate the given test function on each point
+    # Save into a file
+    # Exit
+    #
 
     # data_train_inputs, data_train_outputs = make_random_training_in_box(rng)
     # all_data_train = pd.concat([data_train_inputs, data_train_outputs],axis=1)
     # outfname = 'temp_generated_data.csv'
-    # all_data_train.to_csv(outfname, index=False, header=False)
-    # # all_data_train.columns = ["x0", "x1", "y"]
-    
+    # all_data_train.to_csv(outfname, index=False, header=False)    
     # print(all_data_train)
     # print("Saved samples from above dataframe to file", outfname)
     # print("Exiting.")
@@ -517,7 +516,7 @@ if __name__ == '__main__':
         if (options.spec_seed != 0): # add in -seed[seed value] before csv
             outfname = outfname[:-4] + "-seed" + str(options.spec_seed) + ".csv"
     else:
-        outfname = 'zz-' + str(options.jobid) + "-" + str(options.fn_name) + "-d" + str(options.dim) + "-tpd" + str(options.numtestperdim) + "-lb25pct" + "-rb75pct" + "-tb" + str(options.tb_scale) + "-log" + str(options.log_base) +".csv"
+        outfname = 'zz-' + str(options.jobid) + "-" + str(options.fn_name) + "-d" + str(options.dim) + "-tpd" + str(options.numtestperdim) + "-lb25pct" + "-rb75pct" + "-log" + str(options.log_base) +".csv"
         if (options.spec_seed != 0): # add in -seed[seed value] before csv
             outfname = outfname[:-4] + "-seed" + str(options.spec_seed) + ".csv"
     print("==> Output will be stored in file ",outfname)

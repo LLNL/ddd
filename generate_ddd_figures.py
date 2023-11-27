@@ -8,20 +8,30 @@ import pandas as pd
 from matplotlib import colors
 from matplotlib.pyplot import cm
 import subprocess
+from optparse import OptionParser
 
 
-import sys
-try:
-    # case = int(sys.argv[1])
-    infile = str(sys.argv[1])
-except IndexError as err:
-    print("Not enough arguments: {0}".format(err))
-    sys.exit(1)
-except ValueError as err:
-    print("Illegal value in argument: {0}".format(err))
-    sys.exit(1)
 
-min_density = 50
+usage = "%prog [options]"
+parser = OptionParser(usage)
+parser.add_option( "--infile", help="Path to file listing files to read.  Default: allfiles.multi (in pwd)", 
+        dest="infile", type=str, default='allfiles.multi')  
+parser.add_option("--mindens", dest="mindens", type=float, default=0.0,
+        help="Minimum density to plot.  Default 0.0.")    
+(options, args) = parser.parse_args()
+
+# import sys
+# try:
+#     # case = int(sys.argv[1])
+#     infile = str(sys.argv[1])
+# except IndexError as err:
+#     print("Not enough arguments: {0}".format(err))
+#     sys.exit(1)
+# except ValueError as err:
+#     print("Illegal value in argument: {0}".format(err))
+#     sys.exit(1)
+
+min_density = options.mindens
 
 from functools import reduce
 
@@ -29,9 +39,16 @@ plt.rcParams["font.family"] = "Times New Roman"
 plt.rcParams['font.size'] = 20
 plt.rc('text', usetex=True)
 
-allfiles = open(infile, 'r')
+allfiles = open(options.infile, 'r')
 allfiles = allfiles.readlines()  
-df = pd.read_csv(allfiles[0].strip(), header=0, index_col=0)   
+df = pd.read_csv(allfiles[0].strip(), header=0, index_col=0)  
+
+if df['density'].max() < min_density:
+    print("ERROR: options indicated minimum density to plot is",min_density,"but maximum density in this "+
+        "dataset is",df['density'].max(),". Re-run generate_ddd_figures.py with value "+
+        "of --mindens smaller than",df['density'].max())
+    exit()
+
 for i in range(1,len(allfiles)):
     nextdf = pd.read_csv(allfiles[i].strip(), header=0, index_col=0) 
     df = pd.concat([df, nextdf], ignore_index=True) 
