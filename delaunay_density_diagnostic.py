@@ -336,6 +336,9 @@ if __name__ == '__main__':
         help="Value passed as global seed to random number generator.  Default 0.")
     parser.add_option("--itmax", dest="it_max", type=int, default=100,
         help="Max number of iterations.  More robust to use --maxsamp to set threshold.  Default = 100.")
+    parser.add_option("--save2static", dest="saveTF", action="store_true", default=False,
+	    help="Alternate modality for creating static datasets from test function. If True, sample and evaluate the test function and save to csv file. Default False.")
+
     
     (options, args) = parser.parse_args()
     
@@ -399,8 +402,9 @@ if __name__ == '__main__':
             exit()
         if (options.numtestperdim ** options.dim > 10000):
             print()
-            print("==> WARNING: large number of query points = ", options.numtestperdim ** options.dim)
-            print()
+            print("==> WARNING: number of query points = (query pts per dim)^(dim) =",options.numtestperdim ** options.dim,"is very large.")
+            print("Exiting.")
+            exit()
         if (options.extrap_thresh < 0 or options.extrap_thresh > 0.5):
             print()
             print("==> Set extrapolation threshold in [0,0.5]")
@@ -412,26 +416,23 @@ if __name__ == '__main__':
     rng = np.random.default_rng(globalseed)  
 
 
-    ## save test function data option:
-    #
-    # Randomly sample numtrainpts points 
-    # Evaluate the given test function on each point
-    # Save into a file
-    # Exit
-    #
+    if options.saveTF:
+        # ALTERNATE MODALITY: 
+        #
+        # Randomly sample numtrainpts points with specified parameters
+        # Evaluate the given test function on each point
+        # Save into a csv file
+        # Exit
+        #
 
-    # data_train_inputs, data_train_outputs = make_random_training_in_box(rng)
-    # all_data_train = pd.concat([data_train_inputs, data_train_outputs],axis=1)
-    # outfname = 'temp_generated_data.csv'
-    # all_data_train.to_csv(outfname, index=False, header=False)    
-    # print(all_data_train)
-    # print("Saved samples from above dataframe to file", outfname)
-    # print("Exiting.")
-    # exit()
-
-
-
-
+        data_train_inputs, data_train_outputs = make_random_training_in_box(rng)
+        all_data_train = pd.concat([data_train_inputs, data_train_outputs],axis=1)
+        outfname = 'temp_generated_data.csv'
+        all_data_train.to_csv(outfname, index=False, header=False)    
+        print(all_data_train)
+        print("Saved samples from above dataframe to file", outfname)
+        print("Exiting.")
+        exit()
 
     # torch.manual_seed(globalseed)
 
