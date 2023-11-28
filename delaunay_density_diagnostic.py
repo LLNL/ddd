@@ -358,8 +358,9 @@ if __name__ == '__main__':
             print("Total number of query points:", options.numtestperdim ** options.dim)
 
             # Set bounding box left/right bounds based on zoom center, zoom exponent, and scale factor qpdf
-            options.bboxleftbound  = np.round(options.zoom_ctr - (10 ** (options.zoom_exp))/options.tb_scale,2)
-            options.bboxrightbound = np.round(options.zoom_ctr + (10 ** (options.zoom_exp))/options.tb_scale,2)
+            if (options.zoom_ctr != 999 and options.zoom_exp != 999):
+                options.bboxleftbound  = np.round(options.zoom_ctr - (10 ** (options.zoom_exp))/options.tb_scale,2)
+                options.bboxrightbound = np.round(options.zoom_ctr + (10 ** (options.zoom_exp))/options.tb_scale,2)
 
             # Set query lattice left/right bounds based on bounding box bounds and scale factor qpdf
             tg_scale_fac = (1.0-options.tb_scale)/2
