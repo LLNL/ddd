@@ -48,21 +48,21 @@ from delsparse import delaunaysparsep as dsp
 
 
 #==================================================================================================#
-# Define the test function (hard coded here as the Griewank function)
+# Define the test function 
 #==================================================================================================#
 
-def tf(X): # Griewank function, arbitrary dimension input
+def tf_gwk(X): # Griewank function, arbitrary dimension input
     X = X.T
-
-    # compute and return values from the Griewank function
     term_1 = (1. / 4000.) * sum(X ** 2)
     term_2 = 1.0
     for i, x in enumerate(X):
         term_2 *= np.cos(x) / np.sqrt(i + 1)
     return 1. + term_1 - term_2
 
-    # # instead, return values from a paraboloid:
-    # return (7/20_000) *  ( X[0]**2 + 0.5*(X[1]**2) )
+
+def tf_pbd(X): # Paraboloid, arbitrary dimension input
+    X = X.T
+    return (7/20_000) *  ( X[0]**2 + 0.5*(X[1]**2) )
 
 #==================================================================================================#
 # Make query point lattice in R^dim
@@ -82,7 +82,13 @@ def make_test_data_grid(rng, static_data=False):
     grid_pts = grid_pts.reshape(options.dim, num_samples_per_dim ** options.dim)
     grid_pts = grid_pts.T
 
-    outputs_on_grid = tf(grid_pts)
+    if options.fn_name == 'griewank':
+        outputs_on_grid = tf_gwk(grid_pts)
+    elif options.fn_name == 'paraboloid':
+        outputs_on_grid = tf_pbd(grid_pts)
+    else:
+        print("ERROR: function name not supported.")
+        exit()
 
     data_test_inputs  = pd.DataFrame(grid_pts)
     data_test_outputs = pd.DataFrame(outputs_on_grid)
@@ -111,7 +117,14 @@ def make_random_training_in_box(rng):
     for i in range(options.dim):
         rand_pts_n[:,i] += train_box_shift_vector[i]
 
-    outputs_on_rand_n = tf(rand_pts_n)
+
+    if options.fn_name == 'griewank':
+        outputs_on_rand_n = tf_gwk(rand_pts_n)
+    elif options.fn_name == 'paraboloid':
+        outputs_on_rand_n = tf_pbd(rand_pts_n)
+    else:
+        print("ERROR: function name not supported.")
+        exit()
 
     data_train_inputs  = pd.DataFrame(rand_pts_n)
     data_train_outputs = pd.DataFrame(outputs_on_rand_n)
@@ -295,8 +308,9 @@ if __name__ == '__main__':
     parser.add_option( "--staticdatapath", help="Path to static data set from which samples will be drawn. " +
         "If no path is provided, code uses --fn option to sample data.", 
         dest="data_path", type=str, default=None)  
-    parser.add_option( "--fn", help="Test function to use.  Version 1.0 of the code only supports the Griewank function.  " +
-        "It is possible to code in additional functions by modifying the definition of tf(X).", 
+    parser.add_option( "--fn", help="Test function to use.  Version 2.0 of the code supports the Griewank "+
+                    "function and paraboloid used in the paper (in any dimension).  " +
+                    "Additional functions can be added.  Default 'griewank'.", 
         dest="fn_name", type=str, default="griewank")  
     parser.add_option( "--dim", dest="dim", type=int, default=2, 
         help="Dimension of input space.  Default 2.")
@@ -336,9 +350,11 @@ if __name__ == '__main__':
         help="Value passed as global seed to random number generator.  Default 0.")
     parser.add_option("--itmax", dest="it_max", type=int, default=100,
         help="Max number of iterations.  More robust to use --maxsamp to set threshold.  Default = 100.")
+    parser.add_option("--numrates", dest="num_rates", type=int, default=3,
+	    help="Target number of rates to compute (i.e. number of points on final figure).  Default = 3.")
     parser.add_option("--save2static", dest="saveTF", action="store_true", default=False,
 	    help="Alternate modality for creating static datasets from test function. If True, sample and evaluate the test function and save to csv file. Default False.")
-
+    
     
     (options, args) = parser.parse_args()
     
@@ -379,18 +395,16 @@ if __name__ == '__main__':
             print("Using gradients? : ", options.computeGrad)
             print("Extrapolation threshold: ", options.extrap_thresh)
             # print("Output cor : ", options.out_cor)
-            if (options.fn_name != 'griewank'):
+            if options.fn_name not in ['griewank','paraboloid']:
                 print("==> ERROR: Requested function ", options.fn_name)
-                print("Only the function 'griewank' is supported by this version of the code.")
+                print("Only the functions 'griewank' and 'paraboloid' are currently included in the code.")
                 exit()
-        
         else: # static data path provided
             print("Path to static data: ", options.data_path)
             options.fn_name = 'static'
             options.zoom_ctr = 999.0
             options.zoom_exp = 999.0
 
-        print()
         
         if (options.bboxrightbound <= options.bboxleftbound):
             print("Right bound must be larger than left bound")
@@ -446,18 +460,39 @@ if __name__ == '__main__':
             dfrowct = full_dataset.shape[0]
             dfcolct = full_dataset.shape[1]
             print("Read in data from path.  Interpreted as",dfrowct,"points in R^",dfcolct-1,"with one output value per point.\n")
+            
             options.dim = dfcolct-1
+            print("==> Set dimension based on number of input columns to",dfcolct-1)
+            
             options.max_samp = dfrowct
-            print("Setting dimension =",dfcolct-1,"\n")
+            print("==> Set max sample size to", dfrowct, ", the amount of data points.")
+            
+            options.numtrainpts = int(0.1*dfrowct)
+            print("==> Set initial sample size to", int(0.1*dfrowct), ", roughly 10 percent of data.")
+
+            max_query_pts = 10000
+            target_num_query_pts = np.min([options.max_samp/(2**options.dim),max_query_pts])
+            options.numtestperdim = int(target_num_query_pts ** (1/options.dim))
+            print("==> Set the number of query points per dimension to",options.numtestperdim)
+            print("     (aiming for roughly",options.max_samp/(2**options.dim),"query points or 10,000, whichever is smaller.)")
+            
+            options.log_base = 10 ** (1 / (options.dim * (options.num_rates +1)))
+            print("==> Set upsampling factor b to",options.log_base,"based on heuristic (comment in code)")
+            # Heuristic:  assuming n_0 = 0.1 * (number of data points), as above,
+            #             let n_c = target number of rates to be computed (n_c must be \geq 1) 
+            #             set b = 10^[1/(dim *(n_c+2))]
+            #             this will use close to all the data in the final iteration.
+            print()
             print("Initial sample size:", options.numtrainpts)
             print("Query points per dim:", options.numtestperdim)
             print("Total number of query points:", options.numtestperdim ** options.dim)
             print("Upsampling factor b: ", options.log_base)
+            print()
         except:
             print("\n Error reading in data.  To debug, check that:",
-                    "\n  (1) path printed above is correct and",
-                    "\n  (2) file is .csv of numerical data where each row is",
-                    "the input coordinates followed by 1 output."
+                    "\n  (1) path printed above is correct,",
+                    "\n  (2) file format is .csv of numerical data where each row is",
+                            "the input coordinates followed by 1 output,"
                     "\n  (3) sample files from ddd/staticdata/examples/ load sucessfully")
             exit()
         ########################
@@ -488,6 +523,7 @@ if __name__ == '__main__':
         print("==> Description of full dataset:")
         print(full_dataset_inputs.describe())
         
+        print("\n==> Based on dimension asdf")
         print("\n==> Setting grid of query points from 25th - 75th percentile")
         i = 0
         for col in cols: 
@@ -533,9 +569,10 @@ if __name__ == '__main__':
         out_coord = options.out_cor
 
     print("")
-    print("=================================")
-    print("For output coordinate ", out_coord,": ")
-    print("=== results for ", options.fn_name, " ===")
+    print("======================================")
+    # print("For output coordinate ", out_coord,": ")
+    print("===  results for", options.fn_name, "dim", options.dim, " ===")
+    print("======================================")
     print("samples | density | prop extrap | MSD diff | MSD rate | grad diff | grad rate | analytic diff | analytic rate ") 
     print("")
 
