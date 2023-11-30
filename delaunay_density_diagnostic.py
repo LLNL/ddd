@@ -352,6 +352,8 @@ if __name__ == '__main__':
         help="Max number of iterations.  More robust to use --maxsamp to set threshold.  Default = 100.")
     parser.add_option("--numrates", dest="num_rates", type=int, default=3,
 	    help="Target number of rates to compute (i.e. number of points on final figure).  Default = 3.")
+    parser.add_option("--minpctile", dest="min_pctile", type=int, default=999,
+	    help="For static data, sample on a grid from minpctile to 100-minpctile in each dim.  Default = use built-in heuristic.")
     parser.add_option("--save2static", dest="saveTF", action="store_true", default=False,
 	    help="Alternate modality for creating static datasets from test function. If True, sample and evaluate the test function and save to csv file. Default False.")
     
@@ -424,6 +426,10 @@ if __name__ == '__main__':
             print()
             print("==> Set extrapolation threshold in [0,0.5]")
             exit()
+        if (options.min_pctile < 0 or options.min_pctile > 49) and options.min_pctile != 999:
+            print()
+            print("==> Minimum percentile for static data must be in [0,49]")
+            exit()
 
     echo_options(options)
 
@@ -482,6 +488,22 @@ if __name__ == '__main__':
             #             let n_c = target number of rates to be computed (n_c must be \geq 1) 
             #             set b = 10^[1/(dim *(n_c+2))]
             #             this will use close to all the data in the final iteration.
+            if options.min_pctile == 999:
+                print("\n==> Using heuristic to set percentile bounds for query point grid (comment in code)")
+                # Heuristic based on experimental studies for 10,000 points collected by Latin Hypercube sampling
+                # You can adjust the percentile by the command line option --minpctile
+                #   ideally it should be as low as possible while still having little to no extrapolation
+                # 
+                #          dim 2       3       4       5       6      7+
+                # pctile range [5,95] [10,90] [15,85] [20,80] [25,75] [25,75]
+                #
+                pct_map = np.array([0,0,5,10,15,20,25])
+                if options.dim < 7:
+                    options.min_pctile = pct_map[options.dim]
+                else:
+                    options.min_pctile = 25
+                print("\n==> Set grid of query points from",options.min_pctile,"th-",100-options.min_pctile,"th percentiles.")
+            
             print()
             print("Initial sample size:", options.numtrainpts)
             print("Query points per dim:", options.numtestperdim)
@@ -523,13 +545,11 @@ if __name__ == '__main__':
         print("==> Description of full dataset:")
         print(full_dataset_inputs.describe())
         
-        print("\n==> Based on dimension asdf")
-        print("\n==> Setting grid of query points from 25th - 75th percentile")
         i = 0
         for col in cols: 
             # set coordinate mins and maxes according to 25-75 percentiles
-            cor_min = full_dataset_inputs.quantile(q=0.25)[col]
-            cor_max = full_dataset_inputs.quantile(q=0.75)[col]
+            cor_min = full_dataset_inputs.quantile(q=0.01*options.min_pctile)[col]
+            cor_max = full_dataset_inputs.quantile(q=1-0.01*options.min_pctile)[col]
             x[i] = np.linspace(cor_min, cor_max, options.numtestperdim)
             i += 1
 

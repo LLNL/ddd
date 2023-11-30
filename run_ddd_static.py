@@ -36,11 +36,11 @@ numtrials = 5
 # staticdatapath = 'staticdata/examples/data_paraboloid_exp2_10000.csv'
 # staticdatapath = 'staticdata/examples/data_griewank_exp2_10000.csv'
 # staticdatapath = 'staticdata/examples/data_griewank_dim5_10000.csv'
-# staticdatapath = 'staticdata/examples/data_paraboloid_dim5_10000.csv'
+staticdatapath = 'staticdata/examples/data_paraboloid_dim5_10000.csv'
 # staticdatapath = 'staticdata/examples/data_griewank_dim5_100000.csv'
 # staticdatapath = 'staticdata/examples/data_paraboloid_dim5_100000.csv'
 # staticdatapath = 'staticdata/examples/data_griewank_dim2_10k.csv'
-staticdatapath = 'staticdata/examples/data_paraboloid_dim2_10k.csv'
+# staticdatapath = 'staticdata/examples/data_paraboloid_dim2_10k.csv'
 
 for seed in range(numtrials):
     print("\n ==> Starting ddd for static data =",staticdatapath, " seed=", seed+1, "\n")
