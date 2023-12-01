@@ -235,12 +235,14 @@ def compute_DS_only(data_train_inputs, data_train_outputs, data_test_inputs, dat
                 
                 # unitary normal vector
                 hyper_sfc_normal = vh[options.dim, :]
-
-                # approx grad as normal scaled by vertical component, times -1
-                grad_out = hyper_sfc_normal/hyper_sfc_normal[options.dim]
-                grad_out = -grad_out[:-1]
-                # print("grad out = ", grad_out)
-                grad_est_DS[outputdim][j] = grad_out
+                if hyper_sfc_normal[options.dim] == 0: # if simplex is degenerate, as in extrapolation cases
+                    grad_est_DS[outputdim][j] = np.zeros_like(hyper_sfc_normal[:-1])
+                else:
+                    # approx grad as normal scaled by vertical component, times -1
+                    grad_out = hyper_sfc_normal/hyper_sfc_normal[options.dim]
+                    grad_out = -grad_out[:-1]
+                    # print("grad out = ", grad_out)
+                    grad_est_DS[outputdim][j] = grad_out
 
             # end loop over output dimns 
     # end if computeGrad
@@ -275,14 +277,17 @@ def compute_DS_only(data_train_inputs, data_train_outputs, data_test_inputs, dat
     if (sum(error_out) != 0):
         if print_errors:
             unique_errors = sorted(np.unique(error_out))
-            print(" [Delaunay errors:",end="")
-            for e in unique_errors:
-                if (e == 0): continue
-                indices = tuple(str(i) for i in range(len(error_out))
-                                if (error_out[i] == e))
-                if (len(indices) > 5): indices = indices[:2] + ('...',) + indices[-2:]
-                print(" %3i"%e,"at","{"+",".join(indices)+"}", end=";")
-            print("] ")
+            if unique_errors == [0,2]: # only extrapolation errors
+                pass
+            else:
+                print(" [Delaunay errors:",end="")
+                for e in unique_errors:
+                    if (e == 0): continue
+                    indices = tuple(str(i) for i in range(len(error_out))
+                                    if (error_out[i] == e))
+                    if (len(indices) > 5): indices = indices[:2] + ('...',) + indices[-2:]
+                    print(" %3i"%e,"at","{"+",".join(indices)+"}", end=";")
+                print("] ")
         # Reset the errors to simplex of 1s (to be 0) and weights of 0s.
         bad_indices = (error_out > (1 if allow_extrapolation else 0))
         simp_out[:,bad_indices] = 1
@@ -462,11 +467,13 @@ if __name__ == '__main__':
         data_test_inputs, data_test_outputs = make_test_data_grid(rng)
     else:
         try:
-            full_dataset = pd.read_csv(options.data_path, header=None, index_col=None)
+            if options.data_path[-4:] == '.csv':
+                full_dataset = pd.read_csv(options.data_path, header=None, index_col=None)
+            elif options.data_path[-4:] == '.npy':
+                full_dataset = pd.DataFrame(np.load(options.data_path))
             dfrowct = full_dataset.shape[0]
             dfcolct = full_dataset.shape[1]
             print("Read in data from path.  Interpreted as",dfrowct,"points in R^",dfcolct-1,"with one output value per point.\n")
-            
             options.dim = dfcolct-1
             print("==> Set dimension based on number of input columns to",dfcolct-1)
             
@@ -478,18 +485,19 @@ if __name__ == '__main__':
 
             max_query_pts = 10000
             target_num_query_pts = np.min([options.max_samp/(2**options.dim),max_query_pts])
-            options.numtestperdim = int(target_num_query_pts ** (1/options.dim))
+            options.numtestperdim = max(int(target_num_query_pts ** (1/options.dim)),2)
             print("==> Set the number of query points per dimension to",options.numtestperdim)
             print("     (aiming for roughly",options.max_samp/(2**options.dim),"query points or 10,000, whichever is smaller.)")
             
             options.log_base = 10 ** (1 / (options.dim * (options.num_rates +1)))
-            print("==> Set upsampling factor b to",options.log_base,"based on heuristic (comment in code)")
+            print("==> Requested number of rates to compute (command line option --numrates) =",options.num_rates)
+            print("==> Set upsampling factor b to",options.log_base,"(see heuristic in code)")
             # Heuristic:  assuming n_0 = 0.1 * (number of data points), as above,
             #             let n_c = target number of rates to be computed (n_c must be \geq 1) 
             #             set b = 10^[1/(dim *(n_c+2))]
             #             this will use close to all the data in the final iteration.
             if options.min_pctile == 999:
-                print("\n==> Using heuristic to set percentile bounds for query point grid (comment in code)")
+                print("==> Using heuristic to set percentile bounds for query point grid (comment in code)")
                 # Heuristic based on experimental studies for 10,000 points collected by Latin Hypercube sampling
                 # You can adjust the percentile by the command line option --minpctile
                 #   ideally it should be as low as possible while still having little to no extrapolation
@@ -502,7 +510,7 @@ if __name__ == '__main__':
                     options.min_pctile = pct_map[options.dim]
                 else:
                     options.min_pctile = 25
-                print("\n==> Set grid of query points from",options.min_pctile,"th-",100-options.min_pctile,"th percentiles.")
+            print("==> Set grid of query points from",options.min_pctile,"th-",100-options.min_pctile,"th percentiles.")
             
             print()
             print("Initial sample size:", options.numtrainpts)
@@ -542,7 +550,7 @@ if __name__ == '__main__':
         
         x = np.zeros([num_cols, options.numtestperdim])
 
-        print("==> Description of full dataset:")
+        print("==> Description of inputs from full dataset:")
         print(full_dataset_inputs.describe())
         
         i = 0
@@ -589,10 +597,10 @@ if __name__ == '__main__':
         out_coord = options.out_cor
 
     print("")
-    print("======================================")
+    print("==============================================")
     # print("For output coordinate ", out_coord,": ")
-    print("===  results for", options.fn_name, "dim", options.dim, " ===")
-    print("======================================")
+    print("===  results for", options.fn_name, "dim", options.dim, "seed", options.spec_seed, " ===")
+    print("==============================================")
     print("samples | density | prop extrap | MSD diff | MSD rate | grad diff | grad rate | analytic diff | analytic rate ") 
     print("")
 
@@ -631,6 +639,7 @@ if __name__ == '__main__':
     #######################################################################
 
     quitloop = False
+    print_extrap_warning = False
 
     for i in range(options.it_max): # i = number of "refinements" of interpolant
 
@@ -691,6 +700,8 @@ if __name__ == '__main__':
 
         if (i == 0):
             print(("% 6i & %3.2f & %1.2f & -- & -- & -- & -- & %5.5f & -- \\\\") % (all_pts_in.shape[0], density_of_sample,  prop_extrap_iterate, ds_vs_actual_at_test), flush=True)
+            if prop_extrap_iterate > 0:
+                print_extrap_warning = True
         elif (i == 1):
             print(("% 6i & %3.2f & %1.2f & %5.5f & -- & %5.5f & -- & %5.5f & %5.2f \\\\") % (all_pts_in.shape[0], density_of_sample,  prop_extrap_iterate, new_vs_prev_at_test, grad_new_vs_prev_at_test, ds_vs_actual_at_test, error_rate), flush=True)
         else:
@@ -737,10 +748,14 @@ if __name__ == '__main__':
         # check if we will go over max samples
         if (total_samples_so_far[i] + options.numtrainpts > options.max_samp):
             print("")
-            print("====> Next step would go over ", options.max_samp, " samples; breaking loop.")
+            print("==> Next step would go over ", options.max_samp, " samples; breaking loop.")
             # print("====>    ALSO: setting numtrainpts to 1 to avoid generating unused points ")
             options.numtrainpts = 1
             quitloop = True
+            if print_extrap_warning:
+                print("====> WARNING: Extrapolation occured in some cases - see prop extrap column above.")
+                print("====>          If the proportion of extrapoation does not go to zero quickly in most")
+                print("====>          trials, increase the value of --minpctile closer to 50.")
 
         if options.data_path == None: # use test function to acquire new data 
             new_sample_inputs, new_sample_outputs = make_random_training_in_box(rng)
@@ -784,5 +799,5 @@ if __name__ == '__main__':
     
     # print("====> final all_pts_out shape was ", all_pts_out.shape)
     # print("===> done with output coord ", out_coord)
-    print("===> results saved in ", outfname)
+    print("==> Results saved in ", outfname)
 
