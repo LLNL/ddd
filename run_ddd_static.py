@@ -32,20 +32,23 @@ if any(fname.endswith('allfiles.multi') for fname in os.listdir()):
     exit()
 
 jobid = 123456
-numtrials = 5
+numtrials = 10
 # staticdatapath = 'staticdata/examples/data_paraboloid_exp2_10000.csv'
 # staticdatapath = 'staticdata/examples/data_griewank_exp2_10000.csv'
 # staticdatapath = 'staticdata/examples/data_griewank_dim5_10000.csv'
-staticdatapath = 'staticdata/examples/data_paraboloid_dim5_10000.csv'
+# staticdatapath = 'staticdata/examples/data_paraboloid_dim5_10000.csv'
 # staticdatapath = 'staticdata/examples/data_griewank_dim5_100000.csv'
 # staticdatapath = 'staticdata/examples/data_paraboloid_dim5_100000.csv'
 # staticdatapath = 'staticdata/examples/data_griewank_dim2_10k.csv'
 # staticdatapath = 'staticdata/examples/data_paraboloid_dim2_10k.csv'
+staticdatapath = 'staticdata/examples/ucsd_bb9260080d_cfd_inputs_train.npy'
+# staticdatapath = 'staticdata/examples/ucsd_bb9260080d_cfd_inputs_test.npy'
 
 for seed in range(numtrials):
     print("\n ==> Starting ddd for static data =",staticdatapath, " seed=", seed+1, "\n")
     subprocess.run(["python", "delaunay_density_diagnostic.py", "--jobid", str(jobid),
                     "--staticdatapath", staticdatapath, 
+                    "--numrates", str(5),
                     "--seed", str(seed+1)])
                     # "--numtestperdim", str(20),
                     # "--logbase", str(1.2)])

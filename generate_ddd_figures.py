@@ -140,9 +140,6 @@ for i in range(2):
     y_25  = np.ma.masked_values(merged_df.ir_25per, 0)[:-2]
     y_10  = np.ma.masked_values(merged_df.ir_10per, 0)[:-2]
 
-    
-    
-    print(y)
     if (rate_to_plot == 'grad rate'):
         target     =  1*np.ones_like(x)
         noise_line = -1*np.ones_like(x)
