@@ -27,6 +27,7 @@ import pandas as pd
 # import torch.utils.data as Data
 # from torch.utils.data.sampler import SubsetRandomSampler
 import numpy as np
+import numpy.ma as ma
 
 from numpy.random import rand, default_rng
 from numpy import arccos, array, degrees, absolute
@@ -34,16 +35,11 @@ from numpy.linalg import norm
 
 from optparse import OptionParser
 
-# import numpy.ma as ma
-
-# import xarray as xr
-
 from sys import exit
 import os.path
 
 import copy
 
-import delsparse
 from delsparse import delaunaysparsep as dsp
 
 
@@ -221,30 +217,37 @@ def compute_DS_only(data_train_inputs, data_train_outputs, data_test_inputs, dat
             # # unscaled_inputs = pts_in
 
             for outputdim in range(interp_in_n.shape[0]):
+                # in extrapolation cases, the "enclosing simplex" provided by
+                #   DelaunaySparse is stored as all zeros.  In this case,
+                #   we set grad out to be nans.  Later, we mask for these
+                #   nans when computing the gradient improvement rate. 
 
-                matrixA = np.zeros([options.dim+1, options.dim+1])
-                for i in range(options.dim+1):
-                    matrixA[i] = np.append(unscaled_inputs[:,simp_out[:,j][i]-1], interp_in_n[outputdim][simp_out[:,j][i]-1])
-
-                coords = matrixA
-
-                G = coords.sum(axis=0) / coords.shape[0]
-
-                # run SVD
-                u, s, vh = np.linalg.svd(coords - G)
-                
-                # unitary normal vector
-                hyper_sfc_normal = vh[options.dim, :]
-                if hyper_sfc_normal[options.dim] == 0: # if simplex is degenerate, as in extrapolation cases
-                    grad_est_DS[outputdim][j] = np.zeros_like(hyper_sfc_normal[:-1])
+                simp_out_np = np.array(simp_out[:,j])
+                if np.all((simp_out_np == 0)):
+                    grad_out = np.zeros(options.dim)
+                    grad_out[:] = np.nan
                 else:
+                    matrixA = np.zeros([options.dim+1, options.dim+1])
+                    for i in range(options.dim+1):
+                        matrixA[i] = np.append(unscaled_inputs[:,simp_out[:,j][i]-1], interp_in_n[outputdim][simp_out[:,j][i]-1])
+
+                    coords = matrixA
+
+                    G = coords.sum(axis=0) / coords.shape[0]
+
+                    # run SVD
+                    u, s, vh = np.linalg.svd(coords - G)
+                    
+                    # unitary normal vector
+                    hyper_sfc_normal = vh[options.dim, :]
+
                     # approx grad as normal scaled by vertical component, times -1
                     grad_out = hyper_sfc_normal/hyper_sfc_normal[options.dim]
                     grad_out = -grad_out[:-1]
-                    # print("grad out = ", grad_out)
-                    grad_est_DS[outputdim][j] = grad_out
-
+                # end if/else for simplex all zero indices
+                grad_est_DS[outputdim][j] = grad_out
             # end loop over output dimns 
+        # end loop over simplices
     # end if computeGrad
     else:
         grad_est_DS = []
@@ -325,8 +328,8 @@ if __name__ == '__main__':
         help="Max number of samples to draw.  Default = 20,000.")
     parser.add_option("--numtrainpts", dest="numtrainpts", type=int, default=850,
         help="Initial number of samples points (n_0 in the paper).  Default = 850.")
-    parser.add_option("--numtestperdim", dest="numtestperdim", type=int, default=20,
-        help="Number of test points per dimension. Default = 20.")
+    parser.add_option("--numtestperdim", dest="numtestperdim", type=int, default=999,
+        help="Number of test points per dimension. Default = 999 (invokes heuristic for static data).")
     parser.add_option("--logbase", dest="log_base", type=float, default=1.4641,
         help="Upsampling factor b; also the base of the logarithm in rate computation.  Default 1.4641.")
     parser.add_option("--zoomctr", dest="zoom_ctr", type=float, default=0.0,
@@ -422,7 +425,7 @@ if __name__ == '__main__':
         if options.log_base <= 1:
             print("Log base must be > 1.  Default is 2.0.")
             exit()
-        if (options.numtestperdim ** options.dim > 10000):
+        if (options.numtestperdim ** options.dim > 10000) and (options.data_path == None):
             print()
             print("==> WARNING: number of query points = (query pts per dim)^(dim) =",options.numtestperdim ** options.dim,"is very large.")
             print("Exiting.")
@@ -480,12 +483,15 @@ if __name__ == '__main__':
             options.max_samp = dfrowct
             print("==> Set max sample size to", dfrowct, ", the amount of data points.")
             
-            options.numtrainpts = int(0.1*dfrowct)
-            print("==> Set initial sample size to", int(0.1*dfrowct), ", roughly 10 percent of data.")
+            # options.numtrainpts = int(0.1*dfrowct)
+            # print("==> Set initial sample size to", int(0.1*dfrowct), ", roughly 10 percent of data.")
+            options.numtrainpts = int(0.025*dfrowct)
+            print("==> Set initial sample size to", int(0.1*dfrowct), ", roughly 2.5 percent of data.")
 
             max_query_pts = 10000
             target_num_query_pts = np.min([options.max_samp/(2**options.dim),max_query_pts])
-            options.numtestperdim = max(int(target_num_query_pts ** (1/options.dim)),2)
+            if options.numtestperdim == 999:
+                options.numtestperdim = max(int(target_num_query_pts ** (1/options.dim)),2)
             print("==> Set the number of query points per dimension to",options.numtestperdim)
             print("     (aiming for roughly",options.max_samp/(2**options.dim),"query points or 10,000, whichever is smaller.)")
             
@@ -606,6 +612,7 @@ if __name__ == '__main__':
 
     prev_error = 999999
     prev_vals_at_test = []
+    prev_extrap_indices = []
     prev_diff = 999999
 
     ########################################################################
@@ -653,6 +660,21 @@ if __name__ == '__main__':
         # print('====> proportion extrapolated = %1.2f' % prop_extrap_iterate)
         density_of_sample = all_pts_in.shape[0] ** (1/options.dim)
 
+        # Make mask for extrapolation points for current and prev interpolation values
+        #   mask according to previous iteration, 
+        #   whose extrap pts are a superset of extrap pts in current iteration
+        #   (This computation is irrelevant in the case i=0)
+
+        if i==0:
+            interp_out_int_only = interp_out_n
+            prev_vals_int_only = prev_vals_at_test
+        else:
+            mask_extrap = np.zeros_like(interp_out_n, dtype=int)
+            mask_extrap[:,prev_extrap_indices] = 1
+            interp_out_int_only = ma.masked_array(interp_out_n, mask_extrap)
+            prev_vals_int_only  = ma.masked_array(prev_vals_at_test, mask_extrap)
+
+
         if options.data_path == None: # use test function to acquire new data 
             # for analytical functions, we can compute the "actual" rate of convergence, for reference
             ds_vs_actual_at_test = np.sqrt(((interp_out_n[out_coord,:]-actual_test_vals[out_coord,:]) ** 2).mean())
@@ -679,7 +701,11 @@ if __name__ == '__main__':
             diff_rate = 0
             prev_diff = new_vs_prev_at_test
             if (options.computeGrad):
-                grad_new_vs_prev_at_test = np.linalg.norm(grad_est_DS - grad_prev_vals_at_test)
+                ## grad_est_DS may have nans as a flag for extrapolation (look for grad_out[:] = np.nan above)
+                ## so we mask for nans, compress to remove nans, and then compute norm
+                temp = grad_est_DS - grad_prev_vals_at_test
+                temp = np.ma.array(temp, mask=np.isnan(temp))
+                grad_new_vs_prev_at_test = np.linalg.norm(temp.compressed())
                 grad_diff_rate = 0
                 grad_prev_diff = grad_new_vs_prev_at_test
         else: # i > 1
@@ -688,15 +714,21 @@ if __name__ == '__main__':
             diff_rate = np.log(prev_diff/new_vs_prev_at_test)/np.log(options.log_base) 
             prev_diff = new_vs_prev_at_test
             if (options.computeGrad):
-                grad_new_vs_prev_at_test = np.linalg.norm(grad_est_DS - grad_prev_vals_at_test)
-                # computation of r_k for grad-MSD rate
+                ## grad_est_DS may have nans as a flag for extrapolation (look for grad_out[:] = np.nan above)
+                ## so we mask for nans, compress to remove nans, and then compute norm
+                temp = grad_est_DS - grad_prev_vals_at_test
+                temp = np.ma.array(temp, mask=np.isnan(temp))
+                grad_new_vs_prev_at_test = np.linalg.norm(temp.compressed())
+
+                ## original line - does not check for nans:
+                ## grad_new_vs_prev_at_test = np.linalg.norm(grad_est_DS - grad_prev_vals_at_test)
+                
                 grad_diff_rate = -np.log(grad_new_vs_prev_at_test/grad_prev_diff)/np.log(options.log_base)
                 grad_prev_diff = grad_new_vs_prev_at_test
 
         if (options.computeGrad == False): 
             grad_new_vs_prev_at_test = 0.0
             grad_diff_rate = 0.0
-
 
         if (i == 0):
             print(("% 6i & %3.2f & %1.2f & -- & -- & -- & -- & %5.5f & -- \\\\") % (all_pts_in.shape[0], density_of_sample,  prop_extrap_iterate, ds_vs_actual_at_test), flush=True)
@@ -731,6 +763,7 @@ if __name__ == '__main__':
 
         prev_error = ds_vs_actual_at_test
         prev_vals_at_test = interp_out_n
+        prev_extrap_indices = extrap_indices
         if (options.computeGrad):
             grad_prev_vals_at_test = grad_est_DS
 
