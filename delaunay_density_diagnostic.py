@@ -485,16 +485,13 @@ if __name__ == '__main__':
             
             # options.numtrainpts = int(0.1*dfrowct)
             # print("==> Set initial sample size to", int(0.1*dfrowct), ", roughly 10 percent of data.")
-            options.numtrainpts = int(0.025*dfrowct)
-            print("==> Set initial sample size to", int(0.1*dfrowct), ", roughly 2.5 percent of data.")
+            # options.numtrainpts = int(0.025*dfrowct)
+            # print("==> Set initial sample size to", int(0.25*dfrowct), ", roughly 2.5 percent of data.")
+            options.numtrainpts = int(0.01*dfrowct)
+            print("==> Set initial sample size to", int(0.01*dfrowct), ", roughly 1 percent of data.")
+            # options.numtrainpts = 5
+            # print("+++++++++ WARNING HARDCODED NUM TRAINTPTS HERE +++++++++")
 
-            max_query_pts = 10000
-            target_num_query_pts = np.min([options.max_samp/(2**options.dim),max_query_pts])
-            if options.numtestperdim == 999:
-                options.numtestperdim = max(int(target_num_query_pts ** (1/options.dim)),2)
-            print("==> Set the number of query points per dimension to",options.numtestperdim)
-            print("     (aiming for roughly",options.max_samp/(2**options.dim),"query points or 10,000, whichever is smaller.)")
-            
             options.log_base = 10 ** (1 / (options.dim * (options.num_rates +1)))
             print("==> Requested number of rates to compute (command line option --numrates) =",options.num_rates)
             print("==> Set upsampling factor b to",options.log_base,"(see heuristic in code)")
@@ -518,6 +515,15 @@ if __name__ == '__main__':
                     options.min_pctile = 25
             print("==> Set grid of query points from",options.min_pctile,"th-",100-options.min_pctile,"th percentiles.")
             
+            max_query_pts = 10000
+            side_length_pctle_box = 0.02*(50-options.min_pctile)
+            est_num_pts_in_pctle_box = options.max_samp * (side_length_pctle_box ** options.dim)
+            target_num_query_pts = np.min([est_num_pts_in_pctle_box/(2**options.dim),max_query_pts])
+            if options.numtestperdim == 999:
+                options.numtestperdim = max(int(target_num_query_pts ** (1/options.dim)),2)
+            print("==> Set the number of query points per dimension to",options.numtestperdim)
+            print("     (aiming for roughly",np.round(est_num_pts_in_pctle_box/(2**options.dim)),"query points or 10,000, whichever is smaller.)")
+            
             print()
             print("Initial sample size:", options.numtrainpts)
             print("Query points per dim:", options.numtestperdim)
@@ -531,6 +537,7 @@ if __name__ == '__main__':
                             "the input coordinates followed by 1 output,"
                     "\n  (3) sample files from ddd/staticdata/examples/ load sucessfully")
             exit()
+
         ########################
         # shuffle dataset and make input/output datasets
         ########################
@@ -588,7 +595,7 @@ if __name__ == '__main__':
         if (options.spec_seed != 0): # add in -seed[seed value] before csv
             outfname = outfname[:-4] + "-seed" + str(options.spec_seed) + ".csv"
     else:
-        outfname = 'zz-' + str(options.jobid) + "-" + str(options.fn_name) + "-d" + str(options.dim) + "-tpd" + str(options.numtestperdim) + "-lb25pct" + "-rb75pct" + "-log" + str(options.log_base) +".csv"
+        outfname = 'zz-' + str(options.jobid) + "-" + str(options.fn_name) + "-d" + str(options.dim) + "-tpd" + str(options.numtestperdim) + "-lb" + str(options.min_pctile) + "pctle" + "-log" + str(options.log_base) +".csv"
         if (options.spec_seed != 0): # add in -seed[seed value] before csv
             outfname = outfname[:-4] + "-seed" + str(options.spec_seed) + ".csv"
     print("==> Output will be stored in file ",outfname)

@@ -32,22 +32,28 @@ if any(fname.endswith('allfiles.multi') for fname in os.listdir()):
     exit()
 
 jobid = 123456
-numtrials = 40
+numtrials = 100
 
 # staticdatapath = 'staticdata/examples/toy_ex_paraboloid_10k_d2.csv'
 # staticdatapath = 'staticdata/examples/toy_ex_griewank_10k_d2.csv'
 # staticdatapath = 'staticdata/examples/ucsd_bb9260080d_cfd_inputs_train.npy'
 # staticdatapath = 'staticdata/examples/ucsd_bb9260080d_cfd_inputs_test.npy'
 # staticdatapath = 'staticdata/examples/airfoil_self_noise.csv'
-staticdatapath = 'staticdata/examples/uciml_ccpp_grouped.npy'
+# staticdatapath = 'staticdata/examples/uciml_ccpp_grouped.npy'
+# staticdatapath = 'staticdata/examples/uciml_ccpp_gpd_1in_gpd.npy'
+# staticdatapath = '/Users/gillette7/Desktop/ddd_data_scratch/topography/first_pass/pts_xyz.npy' # 20M pts
+# staticdatapath = '/Users/gillette7/Desktop/ddd_data_scratch/topography/first_pass/pts_xyz_1M.npy' # 1M pts
+# staticdatapath = '/Users/gillette7/Desktop/ddd_data_scratch/topography/first_pass/pts_xyz_100k.npy' # 100k pts
+staticdatapath = '/Users/gillette7/Desktop/ddd_data_scratch/topography/first_pass/pts_xyz_10k.npy' # 10k pts
+
 
 for seed in range(numtrials):
     print("\n ==> Starting ddd for static data =",staticdatapath, " seed=", seed+1, "\n")
     subprocess.run(["python", "delaunay_density_diagnostic.py", "--jobid", str(jobid),
                     "--staticdatapath", staticdatapath, 
-                    "--numrates", str(5),
-                    "--minpctile", str(30),
-                    "--numtestperdim", str(7),
+                    "--numrates", str(3),
+                    "--minpctile", str(10),
+                    # "--numtestperdim", str(10),
                     "--seed", str(seed+1)
                     ])
                     # "--logbase", str(1.2)])
