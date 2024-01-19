@@ -28,7 +28,7 @@ for (( i=0; $i<$(bc<<<"$maxzoom/$zoomstep"); i++ )); do
         echo
         echo Starting trial with zoom exponent =  $(bc<<<"$zoomstep * $i"), seed = $j
         echo
-        python delaunay_density_diagnostic.py --jobid ${jobid} --seed ${j} --zoomexp $(bc<<<"$zoomstep * $i")
+        python delaunay_density_diagnostic.py --jobid ${jobid} --seed ${j} --zoomexp $(bc<<<"$zoomstep * $i") --numtestperdim 20
     done
 done
 ls zz-123456*seed*.csv > allfiles.multi

@@ -32,12 +32,13 @@ zoomstep = 0.4
 minzoom = 0.0
 maxzoom = 4.0
 numtrials = 10
+numtestperdim = 20
 zoomexps = np.linspace(minzoom,maxzoom,num=int(maxzoom/zoomstep))
 
 for zoomexp in zoomexps:
     for seed in range(numtrials):
         print("\n ==> Starting ddd trial with zoom exponent =",zoomexp, " seed=", seed, "\n")
-        subprocess.run(["python", "delaunay_density_diagnostic.py", "--jobid", str(jobid), "--seed", str(seed), "--zoomexp", str(zoomexp)])
+        subprocess.run(["python", "delaunay_density_diagnostic.py", "--jobid", str(jobid), "--seed", str(seed), "--zoomexp", str(zoomexp), "--numtestperdim", str(numtestperdim)])
     #
 #
 
