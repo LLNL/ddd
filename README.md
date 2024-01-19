@@ -17,23 +17,28 @@ Usage
 
 2. Ensure that the `gfortran` compiler is installed.
 
-3. Run the driver script:
+3. Run the driver script for the Griewank and/or static data examples:
    ~~~~
-   python run_ddd_trials.py
+   python run_ddd_griewank.py
    ~~~~
    The above script will run a total of 100 trials of the `delaunay_density_diagnostic.py` script,
-      save the results as `.csv` files, then call `generate_ddd_figures.py`
-      to generate a `.png` figure called `ddd-figure.png`.  A copy of the figure is provided
-      with the repository. Details can be found in the header of  `run_ddd_trials.py`.
+      using data from the 2D Griewank function.  The results are saved as `.csv` files.  Then the script `generate_ddd_figures.py` is called to generate a `.png` figure called `ddd-figure-griewank.png`.  The figure should match the file `ddd-figure-griewank-repo.png` that is contained in the repository.  More details can be found in the header of  `run_ddd_griewank.py`.
 
    A typical run time for a single trial is a few seconds, so the whole script should complete
       in 5-10 minutes.
 
-4. If the figure generates correctly, run
+   ~~~~
+   python run_ddd_static.py
+   ~~~~
+   The above script will run a total of 100 trials of the `delaunay_density_diagnostic.py` script,
+      using data from the static topography dataset described in the paper (and stored in the subfolder `staticdata/`).   The results are saved as `.csv` files.  Then the script `generate_ddd_figures.py` is called to generate a `.png` figure called `ddd-figure-static.png`.  The figure should match the file `ddd-figure-static-repo.png` that is contained in the repository.  More details can be found in the header of  `run_ddd_static.py`.
+
+
+4. If the figures generates correctly, run
    ~~~~
    python delaunay_density_diagnostic.py --help
    ~~~~
-   to see the command line options that can be added to the driver script for
+   to see the command line options that can be added to the driver scripts for
    user-specified experiments.
 
 Debugging notes
@@ -46,7 +51,7 @@ During compiling, this type of warning may occur:
 ~~~~
 Warning: Rank mismatch between actual argument at (1) and actual argument at (2)
 ~~~~
-This warning is issued by the `slatec` library that is included with the DELAUNAYSPARSE source code and is not easily supprssed.  However, this warning is only due to a change in Fortran conventions since the original publication of TOMS 1012 and does not cause any issues in regards to the results.
+This warning is issued by the `slatec` library that is included with the DELAUNAYSPARSE source code and is not easily suppressed.  However, this warning is only due to a change in Fortran conventions since the original publication of TOMS 1012 and does not cause any issues in regards to the results.
 
 Authors
 ----------------
