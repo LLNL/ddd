@@ -32,7 +32,7 @@ if any(fname.endswith('allfiles.multi') for fname in os.listdir()):
     exit()
 
 jobid = 123456
-numtrials = 100
+numtrials = 10
 
 # staticdatapath = 'staticdata/examples/toy_ex_paraboloid_10k_d2.csv'
 # staticdatapath = 'staticdata/examples/toy_ex_griewank_10k_d2.csv'

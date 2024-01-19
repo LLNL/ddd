@@ -21,7 +21,7 @@
 jobid="123456"
 zoomstep="0.4"
 maxzoom="4.0"
-numtrials="10"
+numtrials="1"
 
 for (( i=0; $i<$(bc<<<"$maxzoom/$zoomstep"); i++ )); do
     for ((j=1; j<$(bc<<<"$numtrials + 1"); j=j+1)) do
@@ -32,4 +32,4 @@ for (( i=0; $i<$(bc<<<"$maxzoom/$zoomstep"); i++ )); do
     done
 done
 ls zz-123456*seed*.csv > allfiles.multi
-python generate_ddd_figures.py --infile allfiles.multi --mindens 50
+python generate_ddd_figures.py --infile allfiles.multi --mindens 50 --logscalex

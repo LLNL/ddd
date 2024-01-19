@@ -31,7 +31,7 @@ jobid = 123456
 zoomstep = 0.4
 minzoom = 0.0
 maxzoom = 4.0
-numtrials = 10
+numtrials = 1
 numtestperdim = 20
 zoomexps = np.linspace(minzoom,maxzoom,num=int(maxzoom/zoomstep))
 
@@ -51,4 +51,4 @@ n_fnames = ["{}\n".format(i) for i in allfiles]
 with open('allfiles.multi', 'w') as fp:
     fp.writelines(n_fnames)
 
-subprocess.run(["python", "generate_ddd_figures.py", "--infile", "allfiles.multi", "--mindens", "50"])
+subprocess.run(["python", "generate_ddd_figures.py", "--infile", "allfiles.multi", "--mindens", "50", "--logscalex"])

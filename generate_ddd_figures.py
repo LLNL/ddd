@@ -17,7 +17,9 @@ parser = OptionParser(usage)
 parser.add_option( "--infile", help="Path to file listing files to read.  Default: allfiles.multi (in pwd)", 
         dest="infile", type=str, default='allfiles.multi')  
 parser.add_option("--mindens", dest="mindens", type=float, default=0.0,
-        help="Minimum density to plot.  Default 0.0.")    
+        help="Minimum density to plot.  Default 0.0.")
+parser.add_option("--logscalex", dest="logscalex", action="store_true", default=False,
+        help="Use log scale for x axis.  Default False.") 
 (options, args) = parser.parse_args()
 
 # import sys
@@ -157,10 +159,15 @@ for i in range(2):
     # ax[i].legend([l_target,l_mean,l_75,l_90],['target rate','mean','inter-quartile range','inter-decile range'],loc=3)
     # ax[i].legend([l_target,l_mean,l_75,l_noise],['target rate','mean','inter-quartile range','noise-only rate'],prop={'size': 12},loc=3)
     # ax[i].legend([l_target,l_noise,l_mean,l_75,l_90],['recoverable features','noisy features','mean rate','inter-quartile range','inter-decile range'],loc=7)
-    # ax[i].set_xscale('log')
 
-    ax[i].xaxis.set_major_locator(LogLocator(base=10))
-    ax[i].xaxis.set_major_locator(MaxNLocator(nbins=4))
+##### NEED IF CLAUSE HERE: for trials, do log scale
+    # and for static do  set major locator below
+
+    if options.logscalex:
+        ax[i].set_xscale('log')
+    else:
+        ax[i].xaxis.set_major_locator(LogLocator(base=10))
+        ax[i].xaxis.set_major_locator(MaxNLocator(nbins=4))
     # ax[i].xaxis.set_major_locator(LogLocator(base=10.0, subs=[1.0]))
     # ax[i].xaxis.set_major_formatter(LogFormatter(labelOnlyBase=False))
     # ax[i].xaxis.set_major_formatter(ScalarFormatter(useMathText=False))
