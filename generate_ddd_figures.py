@@ -35,17 +35,6 @@ parser.add_option("--logscalex", dest="logscalex", action="store_true", default=
         help="Use log scale for x axis.  Default False.") 
 (options, args) = parser.parse_args()
 
-# import sys
-# try:
-#     # case = int(sys.argv[1])
-#     infile = str(sys.argv[1])
-# except IndexError as err:
-#     print("Not enough arguments: {0}".format(err))
-#     sys.exit(1)
-# except ValueError as err:
-#     print("Illegal value in argument: {0}".format(err))
-#     sys.exit(1)
-
 min_density = options.mindens
 
 from functools import reduce
@@ -67,15 +56,6 @@ if df['density'].max() < min_density:
 for i in range(1,len(allfiles)):
     nextdf = pd.read_csv(allfiles[i].strip(), header=0, index_col=0) 
     df = pd.concat([df, nextdf], ignore_index=True) 
-
-# samp0 = df['samples'].unique()[0]
-# samp1 = df['samples'].unique()[1]
-# samp2 = df['samples'].unique()[2]
-# tempdf = df[df['samples'] == samp2]['iterate rate']
-# print("val range = ", tempdf.max() - tempdf.min())
-# tempdf = df[df['samples'] == samp2]['grad rate']
-# print("grd range = ", tempdf.max() - tempdf.min())
-
 
 
 ###### filter out small densitites
@@ -173,9 +153,6 @@ for i in range(2):
     # ax[i].legend([l_target,l_mean,l_75,l_noise],['target rate','mean','inter-quartile range','noise-only rate'],prop={'size': 12},loc=3)
     # ax[i].legend([l_target,l_noise,l_mean,l_75,l_90],['recoverable features','noisy features','mean rate','inter-quartile range','inter-decile range'],loc=7)
 
-##### NEED IF CLAUSE HERE: for trials, do log scale
-    # and for static do  set major locator below
-
     if options.logscalex:
         ax[i].set_xscale('log')
     else:
@@ -186,9 +163,6 @@ for i in range(2):
     # ax[i].xaxis.set_major_formatter(ScalarFormatter(useMathText=False))
     plt.xticks(fontsize=20)
     plt.yticks(fontsize=20)
-    
-    # print("x=",x)
-    # exit()
     
     # draw zoom breaks
     if len(zoom_breaks) > 1:
@@ -204,13 +178,13 @@ for i in range(2):
         ax[i].set_ylim(-2.0, 2.0)
         ax[i].set_yticks([-2,-1,0,1,2])
         ax[i].set_xlabel('average sample spacing', fontsize=24) # L/N^(1/d)
-        
-
-
 
 plt.subplots_adjust(left=0.05, right=0.95, top=0.9, bottom=0.05)
 
 plt.savefig(options.outfile,format='png', bbox_inches='tight')
 # plt.show()
 print("==> Saved figure as",options.outfile)
-subprocess.call(["open", options.outfile])
+try: # for Windows
+    subprocess.call(['start', options.outfile],shell=True)
+except: # for Linux / Mac
+    subprocess.call(["open", options.outfile])
