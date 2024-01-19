@@ -1,26 +1,41 @@
+#############################################################################################
+# Script generating figures for the Delaunay Density Diagnositic 
+#   as used in the paper
+#   Algorithm XXXX: The Delaunay Density Diagnostic
+#       under review at ACM Transactions on Mathematical Software
+#       (original title: Data-driven geometric scale detection via Delaunay interpolation)
+#   by Andrew Gillette and Eugene Kur
+#   Version 2.0, Jan 2024
+#
+# This code is called by the files run_ddd_*.py using a subprocess command.
+#############################################################################################
+
 
 from matplotlib import pyplot as plt
-from matplotlib.ticker import FormatStrFormatter
+# from matplotlib.ticker import FormatStrFormatter
+from matplotlib.ticker import LogLocator, MaxNLocator, LogFormatter, ScalarFormatter
 import math
 import numpy as np
 import pandas as pd
 from matplotlib import colors
 from matplotlib.pyplot import cm
 import subprocess
+from optparse import OptionParser
 
 
-import sys
-try:
-    # case = int(sys.argv[1])
-    infile = str(sys.argv[1])
-except IndexError as err:
-    print("Not enough arguments: {0}".format(err))
-    sys.exit(1)
-except ValueError as err:
-    print("Illegal value in argument: {0}".format(err))
-    sys.exit(1)
+usage = "%prog [options]"
+parser = OptionParser(usage)
+parser.add_option( "--infile", help="Path to file listing files to read.  Default: allfiles.multi (in pwd)", 
+        dest="infile", type=str, default='allfiles.multi')  
+parser.add_option( "--outfile", help="Filename for figure to be generated.  Default: ddd-figure-default.png", 
+        dest="outfile", type=str, default='ddd-figure-default.png')  
+parser.add_option("--mindens", dest="mindens", type=float, default=0.0,
+        help="Minimum density to plot.  Default 0.0.")
+parser.add_option("--logscalex", dest="logscalex", action="store_true", default=False,
+        help="Use log scale for x axis.  Default False.") 
+(options, args) = parser.parse_args()
 
-min_density = 50
+min_density = options.mindens
 
 from functools import reduce
 
@@ -28,21 +43,19 @@ plt.rcParams["font.family"] = "Times New Roman"
 plt.rcParams['font.size'] = 20
 plt.rc('text', usetex=True)
 
-allfiles = open(infile, 'r')
+allfiles = open(options.infile, 'r')
 allfiles = allfiles.readlines()  
-df = pd.read_csv(allfiles[0].strip(), header=0, index_col=0)   
+df = pd.read_csv(allfiles[0].strip(), header=0, index_col=0)  
+
+if df['density'].max() < min_density:
+    print("ERROR: options indicated minimum density to plot is",min_density,"but maximum density in this "+
+        "dataset is",df['density'].max(),". Re-run generate_ddd_figures.py with value "+
+        "of --mindens smaller than",df['density'].max())
+    exit()
+
 for i in range(1,len(allfiles)):
     nextdf = pd.read_csv(allfiles[i].strip(), header=0, index_col=0) 
     df = pd.concat([df, nextdf], ignore_index=True) 
-
-# samp0 = df['samples'].unique()[0]
-# samp1 = df['samples'].unique()[1]
-# samp2 = df['samples'].unique()[2]
-# tempdf = df[df['samples'] == samp2]['iterate rate']
-# print("val range = ", tempdf.max() - tempdf.min())
-# tempdf = df[df['samples'] == samp2]['grad rate']
-# print("grd range = ", tempdf.max() - tempdf.min())
-
 
 
 ###### filter out small densitites
@@ -110,15 +123,18 @@ for i in range(2):
     # Merge them all at once
     merged_df = pd.concat(data_frames, join='outer', axis=1)
 
-    x     = merged_df.index
-
-    y_90  = np.ma.masked_values(merged_df.ir_90per, 0)
-    y_75  = np.ma.masked_values(merged_df.ir_75per, 0)
-    y     = np.ma.masked_values(merged_df.ir_mean , 0)
-    y_25  = np.ma.masked_values(merged_df.ir_25per, 0)
-    y_10  = np.ma.masked_values(merged_df.ir_10per, 0)
-
+    x = merged_df.index
+    x = x[:-2] 
+    # Note: the largest 2 x values have no associated y-values
+    #       because rates can only be computed starting with the
+    #       third y value; we use [:-2] to omit empty data
     
+    y_90  = np.ma.masked_values(merged_df.ir_90per, 0)[:-2]
+    y_75  = np.ma.masked_values(merged_df.ir_75per, 0)[:-2]
+    y     = np.ma.masked_values(merged_df.ir_mean , 0)[:-2]
+    y_25  = np.ma.masked_values(merged_df.ir_25per, 0)[:-2]
+    y_10  = np.ma.masked_values(merged_df.ir_10per, 0)[:-2]
+
     if (rate_to_plot == 'grad rate'):
         target     =  1*np.ones_like(x)
         noise_line = -1*np.ones_like(x)
@@ -136,11 +152,22 @@ for i in range(2):
     # ax[i].legend([l_target,l_mean,l_75,l_90],['target rate','mean','inter-quartile range','inter-decile range'],loc=3)
     # ax[i].legend([l_target,l_mean,l_75,l_noise],['target rate','mean','inter-quartile range','noise-only rate'],prop={'size': 12},loc=3)
     # ax[i].legend([l_target,l_noise,l_mean,l_75,l_90],['recoverable features','noisy features','mean rate','inter-quartile range','inter-decile range'],loc=7)
-    ax[i].set_xscale('log')
+
+    if options.logscalex:
+        ax[i].set_xscale('log')
+    else:
+        ax[i].xaxis.set_major_locator(LogLocator(base=10))
+        ax[i].xaxis.set_major_locator(MaxNLocator(nbins=4))
+    # ax[i].xaxis.set_major_locator(LogLocator(base=10.0, subs=[1.0]))
+    # ax[i].xaxis.set_major_formatter(LogFormatter(labelOnlyBase=False))
+    # ax[i].xaxis.set_major_formatter(ScalarFormatter(useMathText=False))
+    plt.xticks(fontsize=20)
+    plt.yticks(fontsize=20)
     
     # draw zoom breaks
-    for zb in zoom_breaks:
-        ax[i].axvline(x=zb)  
+    if len(zoom_breaks) > 1:
+        for zb in zoom_breaks:
+            ax[i].axvline(x=zb)  
 
     if i == 0:
         ax[i].set_ylabel(r'\texttt{MSD} rate', fontsize=24) 
@@ -151,16 +178,20 @@ for i in range(2):
         ax[i].set_ylim(-2.0, 2.0)
         ax[i].set_yticks([-2,-1,0,1,2])
         ax[i].set_xlabel('average sample spacing', fontsize=24) # L/N^(1/d)
-        
-    plt.xticks(fontsize=20)
-    plt.yticks(fontsize=20)
-
-
 
 plt.subplots_adjust(left=0.05, right=0.95, top=0.9, bottom=0.05)
 
-figname = 'ddd-figure.png'
-plt.savefig(figname,format='png', bbox_inches='tight')
+plt.savefig(options.outfile,format='png', bbox_inches='tight')
 # plt.show()
-print("==> Saved figure as ddd-figure.png")
-subprocess.call(["open", figname])
+print("==> Saved figure as",options.outfile)
+
+########
+# To open the saved figure at the conclusion of the script, 
+# uncomment the appropriate line below:
+########
+
+## for Windows:
+# subprocess.call(['start', options.outfile],shell=True)
+
+## for Linux / Mac:
+# subprocess.call(["open", options.outfile])
