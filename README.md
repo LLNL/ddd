@@ -1,6 +1,6 @@
 Delaunay Density Diagnostic
 ----------------
-   Version 2.0, November 2023
+   Version 2.0, January 2024.
 
    This code implements algorithms described in:\
    **Algorithm XXXX: The Delaunay Density Diagnostic**\
