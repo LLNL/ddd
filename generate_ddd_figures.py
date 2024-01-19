@@ -1,3 +1,15 @@
+#############################################################################################
+# Script generating figures for the Delaunay Density Diagnositic 
+#   as used in the paper
+#   Algorithm XXXX: The Delaunay Density Diagnostic
+#       under review at ACM Transactions on Mathematical Software
+#       (original title: Data-driven geometric scale detection via Delaunay interpolation)
+#   by Andrew Gillette and Eugene Kur
+#   Version 2.0, Jan 2024
+#
+# This code is called by the files run_ddd_*.py using a subprocess command.
+#############################################################################################
+
 
 from matplotlib import pyplot as plt
 # from matplotlib.ticker import FormatStrFormatter
@@ -11,11 +23,12 @@ import subprocess
 from optparse import OptionParser
 
 
-
 usage = "%prog [options]"
 parser = OptionParser(usage)
 parser.add_option( "--infile", help="Path to file listing files to read.  Default: allfiles.multi (in pwd)", 
         dest="infile", type=str, default='allfiles.multi')  
+parser.add_option( "--outfile", help="Filename for figure to be generated.  Default: ddd-figure-default.png", 
+        dest="outfile", type=str, default='ddd-figure-default.png')  
 parser.add_option("--mindens", dest="mindens", type=float, default=0.0,
         help="Minimum density to plot.  Default 0.0.")
 parser.add_option("--logscalex", dest="logscalex", action="store_true", default=False,
@@ -197,8 +210,7 @@ for i in range(2):
 
 plt.subplots_adjust(left=0.05, right=0.95, top=0.9, bottom=0.05)
 
-figname = 'ddd-figure.png'
-plt.savefig(figname,format='png', bbox_inches='tight')
+plt.savefig(options.outfile,format='png', bbox_inches='tight')
 # plt.show()
-print("==> Saved figure as ddd-figure.png")
-subprocess.call(["open", figname])
+print("==> Saved figure as",options.outfile)
+subprocess.call(["open", options.outfile])

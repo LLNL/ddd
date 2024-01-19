@@ -1,9 +1,11 @@
 #############################################################################################
 # Driver script for Delaunay Density Diagnositic (python version)
-#   based on the paper
-#   Data-driven geometric scale detection via Delaunay interpolation
+#   as used in the paper
+#   Algorithm XXXX: The Delaunay Density Diagnostic
+#       under review at ACM Transactions on Mathematical Software
+#       (original title: Data-driven geometric scale detection via Delaunay interpolation)
 #   by Andrew Gillette and Eugene Kur
-#   Version 1.1, May 2023
+#   Version 2.0, Jan 2024
 #
 # This script does the following:
 #   1) Run multiple trials of delaunay_density_diagnostic.py for Griewank in dim 2.
@@ -15,7 +17,7 @@
 #   3) Call generate_ddd_figures.py on allfiles.multi, which does the following: 
 #           Generate figure showing MSD and grad-MSD rate as a function 
 #               of average sample spacing.  
-#           Output figure is displayed and then saved as ddd-figure.png
+#           Output figure is displayed and then saved as ddd-figure-griewank.png
 #############################################################################################
 
 import subprocess
@@ -31,7 +33,7 @@ jobid = 123456
 zoomstep = 0.4
 minzoom = 0.0
 maxzoom = 4.0
-numtrials = 1
+numtrials = 10
 numtestperdim = 20
 zoomexps = np.linspace(minzoom,maxzoom,num=int(maxzoom/zoomstep))
 
@@ -51,4 +53,4 @@ n_fnames = ["{}\n".format(i) for i in allfiles]
 with open('allfiles.multi', 'w') as fp:
     fp.writelines(n_fnames)
 
-subprocess.run(["python", "generate_ddd_figures.py", "--infile", "allfiles.multi", "--mindens", "50", "--logscalex"])
+subprocess.run(["python", "generate_ddd_figures.py", "--infile", "allfiles.multi", "--outfile", "ddd-figure-griewank.png", "--mindens", "50", "--logscalex"])

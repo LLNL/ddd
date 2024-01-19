@@ -1,20 +1,21 @@
 #############################################################################################
-# Driver script for Delaunay Density Diagnositic with static data set#
+# Driver script for Delaunay Density Diagnositic with static data set
 #   as described in the paper
 #   Algorithm XXXX: The Delaunay Density Diagnostic
 #       under review at ACM Transactions on Mathematical Software
 #       (original title: Data-driven geometric scale detection via Delaunay interpolation)
 #   by Andrew Gillette and Eugene Kur
-#   Version 2.0, November 2023
+#   Version 2.0, Jan 2024
 #
 # This script does the following:
-#   1) Run multiple trials of delaunay_density_diagnostic.py for a static data set.
+#   1) Run multiple trials of delaunay_density_diagnostic.py for a static data set 
+#       (xyz coordinates of topography data as described in the paper).
 #           Output consists of one file per trial of the form zz*seed*.csv
 #   2) Save list of all output files into a txt file called allfiles.multi.
 #   3) Call generate_ddd_figures.py on allfiles.multi, which does the following: 
 #           Generate figure showing MSD and grad-MSD rate as a function 
 #               of average sample spacing.  
-#           Output figure is displayed and then saved as ddd-figure.png
+#           Output figure is displayed and then saved as ddd-figure-static.png
 #############################################################################################
 
 import subprocess
@@ -32,7 +33,7 @@ if any(fname.endswith('allfiles.multi') for fname in os.listdir()):
     exit()
 
 jobid = 123456
-numtrials = 10
+numtrials = 100
 
 staticdatapath = 'staticdata/topog_ex_10k.npy'
 
@@ -57,7 +58,7 @@ n_fnames = ["{}\n".format(i) for i in allfiles]
 with open('allfiles.multi', 'w') as fp:
     fp.writelines(n_fnames)
 
-subprocess.run(["python", "generate_ddd_figures.py", "--infile", "allfiles.multi", "--mindens", "0"])
+subprocess.run(["python", "generate_ddd_figures.py", "--infile", "allfiles.multi", "--outfile", "ddd-figure-static.png", "--mindens", "0"])
 
 
 ## Alternate modality example:
