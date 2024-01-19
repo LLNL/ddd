@@ -184,7 +184,14 @@ plt.subplots_adjust(left=0.05, right=0.95, top=0.9, bottom=0.05)
 plt.savefig(options.outfile,format='png', bbox_inches='tight')
 # plt.show()
 print("==> Saved figure as",options.outfile)
-try: # for Windows
-    subprocess.call(['start', options.outfile],shell=True)
-except: # for Linux / Mac
-    subprocess.call(["open", options.outfile])
+
+########
+# To open the saved figure at the conclusion of the script, 
+# uncomment the appropriate line below:
+########
+
+## for Windows:
+# subprocess.call(['start', options.outfile],shell=True)
+
+## for Linux / Mac:
+# subprocess.call(["open", options.outfile])
