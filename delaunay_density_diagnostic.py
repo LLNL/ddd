@@ -364,6 +364,8 @@ if __name__ == '__main__':
 	    help="For static data, sample on a grid from minpctile to 100-minpctile in each dim.  Default = use built-in heuristic.")
     parser.add_option("--save2static", dest="saveTF", action="store_true", default=False,
 	    help="Alternate modality for creating static datasets from test function. If True, sample and evaluate the test function and save to csv file. Default False.")
+    parser.add_option("--removeClosePts", dest="removeClose", action="store_true", default=False,
+	    help="Alternate modality for removing close points in a data set. If True, load static file and save a new file with close poitns removed. Default False.")
     
     
     (options, args) = parser.parse_args()
@@ -462,14 +464,20 @@ if __name__ == '__main__':
         print("Saved samples from above dataframe to file", outfname)
         print("Exiting.")
         exit()
+    # end saveTF modality
 
     # torch.manual_seed(globalseed)
 
     if options.data_path == None: # use test function to acquire new data
+        if options.removeClose:
+            print("==> ERROR: The removeClosePoints modality is intended for use with static data.")
+            print("    Remove this check if use with synthetic data is desired.  Exiting.")
+            exit()
         data_train_inputs, data_train_outputs = make_random_training_in_box(rng)    
         data_test_inputs, data_test_outputs = make_test_data_grid(rng)
     else:
         try:
+            
             if options.data_path[-4:] == '.csv':
                 full_dataset = pd.read_csv(options.data_path, header=None, index_col=None)
             elif options.data_path[-4:] == '.npy':
@@ -482,7 +490,66 @@ if __name__ == '__main__':
             
             options.max_samp = dfrowct
             print("==> Set max sample size to", dfrowct, ", the amount of data points.")
-            
+                        
+            if options.removeClose:
+                # ALTERNATE MODALITY: (for use when DelaunaySparse gives Error Code 30)
+                #
+                # Group points that are within a specied tolerance of each other in the input space using a kd tree
+                # For each group, store the average of each coordinate and output independently, then delete the group
+                # Write the result to a file
+                # Exit
+                #
+                # adapted from: 
+                # https://www.tutorialguruji.com/python/finding-duplicates-with-tolerance-and-assign-to-a-set-in-pandas/
+
+                import networkx as nx
+                from scipy.spatial import KDTree
+
+                def group_neighbors(df, tol, p=np.inf, show=False):
+                    r = np.linalg.norm(np.ones(len(tol)), p)
+                    print("==> Making kd tree")
+                    kd = KDTree(df[tol.index] / tol)
+                    print("==> Done making kd tree")
+                    g = nx.Graph([
+                        (i, j)
+                        for i, neighbors in enumerate(kd.query_ball_tree(kd, r=r, p=p))
+                        for j in neighbors
+                    ])
+                    print("==> Done making neighbor graph")
+                    if show:
+                        nx.draw_networkx(g)
+                    ix, id_ = np.array([
+                        (j, i)
+                        for i, s in enumerate(nx.connected_components(g))
+                        for j in s
+                    ]).T
+                    id_[ix] = id_.copy()
+                    return df.assign(set_id=id_)
+
+                inputdf = full_dataset.iloc[:,0:options.dim]
+                # for uniform_tol in [1e-7,1e-6,1e-5,1e-4,1e-3]:
+                uniform_tol = 1e-5
+                array_tol = uniform_tol * np.ones(options.dim)
+                tol = pd.Series(array_tol, index=inputdf.columns)
+                print("==> Starting group neighbors routine")
+                gndf = group_neighbors(inputdf, tol, p=2)
+                full_dataset['set_id'] = gndf['set_id']
+                full_dataset = full_dataset.groupby(['set_id']).mean().reset_index(drop=True)
+                grouped_data_name = options.data_path[:-4]+"_grouped"
+                print("==> For tolerance = ", array_tol, " there are ", len(full_dataset), " distinct inputs.")
+                np.save(grouped_data_name, full_dataset.to_numpy())
+                print("==> SAVED full_dataset with close points average to",grouped_data_name+".npy") 
+                print("==> reduced dataset has shape:")
+                print(full_dataset.shape)
+                print("==> reduced dataset has description:")
+                print(full_dataset.describe())
+                print("Exiting; re-run using",grouped_data_name+".npy","and remove flag --removeClosePts")
+                exit()
+
+            # end removeClose modality
+
+
+
             # options.numtrainpts = int(0.1*dfrowct)
             # print("==> Set initial sample size to", int(0.1*dfrowct), ", roughly 10 percent of data.")
             # options.numtrainpts = int(0.025*dfrowct)
@@ -531,13 +598,16 @@ if __name__ == '__main__':
             print("Upsampling factor b: ", options.log_base)
             print()
         except:
-            print("\n Error reading in data.  To debug, check that:",
-                    "\n  (1) path printed above is correct,",
-                    "\n  (2) file format is .csv of numerical data where each row is",
-                            "the input coordinates followed by 1 output,"
-                    "\n  (3) sample files from ddd/staticdata/examples/ load sucessfully")
-            exit()
-
+            if options.removeClose:
+                exit()
+            else:
+                print("\n Error reading in data.  To debug, check that:",
+                        "\n  (1) path printed above is correct,",
+                        "\n  (2) file format is .csv of numerical data where each row is",
+                                "the input coordinates followed by 1 output,"
+                        "\n  (3) sample files from ddd/staticdata/examples/ load sucessfully")
+                exit()
+            
         ########################
         # shuffle dataset and make input/output datasets
         ########################
