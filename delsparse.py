@@ -58,7 +58,8 @@ except:
         print("  ", _command)
     # Run the compilation command.
     import subprocess
-    subprocess.run(_command, shell=True, cwd=_this_directory)
+    # subprocess.run(_command, shell=True, cwd=_this_directory)
+    subprocess.check_call(_command, shell=True, cwd=_this_directory)
     # Import the shared object file as a C library with ctypes.
     clib = ctypes.CDLL(_path_to_lib)
 # --------------------------------------------------------------------
