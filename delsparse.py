@@ -48,7 +48,11 @@ except:
     if os.path.exists(_shared_object_name):
         os.remove(_shared_object_name)
     # Compile a new shared object.
-    _command = " ".join([_fort_compiler] + _compile_options + ["-o", _shared_object_name] + _ordered_dependencies)
+    
+    _command = [_fort_compiler] + _compile_options + ["-o", _shared_object_name] + _ordered_dependencies
+    # Note: this syntax may work instead:
+    # _command = " ".join([_fort_compiler] + _compile_options + ["-o", _shared_object_name] + _ordered_dependencies)
+    
     if _verbose:
         print("Running system command with arguments")
         print("  ", _command)
