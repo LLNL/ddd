@@ -144,10 +144,10 @@ for i in range(2):
 
     l_10    = ax[i].fill_between(x,y_10,y_25,color='lightblue')
     l_25    = ax[i].fill_between(x,y_25,y,color='royalblue')
-    l_mean, = ax[i].plot(x,y,'k',marker='o')
+    l_mean, = ax[i].plot(x,y,'k',linewidth=4,marker='o',markersize=12)
     l_75    = ax[i].fill_between(x,y,y_75,color='royalblue')
     l_90    = ax[i].fill_between(x,y_75,y_90,color='lightblue')
-    l_target, = ax[i].plot(x, target, '--', linewidth=4, color='tab:green')
+    l_target, = ax[i].plot(x, target, ':', linewidth=4, color='tab:green')
     l_noise,  = ax[i].plot(x, noise_line, '--', linewidth=4, color='tab:red')
     # ax[i].legend([l_target,l_mean,l_75,l_90],['target rate','mean','inter-quartile range','inter-decile range'],loc=3)
     # ax[i].legend([l_target,l_mean,l_75,l_noise],['target rate','mean','inter-quartile range','noise-only rate'],prop={'size': 12},loc=3)
