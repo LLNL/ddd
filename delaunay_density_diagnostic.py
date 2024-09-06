@@ -50,10 +50,8 @@ from delsparse import delaunaysparsep as dsp
 
 #==================================================================================================#
 # Define the test function 
-# Define the test function 
 #==================================================================================================#
 
-def tf_gwk(X): # Griewank function, arbitrary dimension input
 def tf_gwk(X): # Griewank function, arbitrary dimension input
     X = X.T
     term_1 = (1. / 4000.) * sum(X ** 2)
@@ -378,14 +376,8 @@ if __name__ == '__main__':
         "If no path is provided, code uses --fn option to sample data.", 
         dest="data_path", type=str, default=None)  
     parser.add_option( "--fn", help="Test function to use.  Version 2.0 of the code supports the Griewank "+
-                    "function and paraboloid used in the paper (in any dimension).  " +
-                    "Additional functions can be added.  Default 'griewank'.", 
-    parser.add_option( "--staticdatapath", help="Path to static data set from which samples will be drawn. " +
-        "If no path is provided, code uses --fn option to sample data.", 
-        dest="data_path", type=str, default=None)  
-    parser.add_option( "--fn", help="Test function to use.  Version 2.0 of the code supports the Griewank "+
-                    "function and paraboloid used in the paper (in any dimension).  " +
-                    "Additional functions can be added.  Default 'griewank'.", 
+        "function and paraboloid used in the paper (in any dimension).  " +
+        "Additional functions can be added.  Default 'griewank'.", 
         dest="fn_name", type=str, default="griewank")  
     parser.add_option( "--dim", dest="dim", type=int, default=2, 
         help="Dimension of input space.  Default 2.")
@@ -395,8 +387,6 @@ if __name__ == '__main__':
         help="Max number of samples to draw.  Default = 20,000.")
     parser.add_option("--numtrainpts", dest="numtrainpts", type=int, default=850,
         help="Initial number of samples points (n_0 in the paper).  Default = 850.")
-    parser.add_option("--numtestperdim", dest="numtestperdim", type=int, default=999,
-        help="Number of test points per dimension. Default = 999 (invokes heuristic for static data).")
     parser.add_option("--numtestperdim", dest="numtestperdim", type=int, default=999,
         help="Number of test points per dimension. Default = 999 (invokes heuristic for static data).")
     parser.add_option("--logbase", dest="log_base", type=float, default=1.4641,
@@ -503,28 +493,6 @@ if __name__ == '__main__':
             options.fn_name = 'static'
             options.zoom_ctr = 999.0
             options.zoom_exp = 999.0
-
-            print("Query point bounds in each dim: ", "[", options.queryleftbound, ", ", options.queryrightbound, "]")
-            print("Query points dimension fraction (qpdf): ", options.tb_scale)
-            print("Bounding box bounds in each dim: ", "[", options.bboxleftbound, ", ", options.bboxrightbound, "]")
-            print()
-            print("Initial sample size:", options.numtrainpts)
-            print("Maximum sample size:", options.max_samp)
-            print("Upsampling factor b: ", options.log_base)
-            print()
-            print("Using gradients? : ", options.computeGrad)
-            print("Extrapolation threshold: ", options.extrap_thresh)
-            # print("Output cor : ", options.out_cor)
-            if options.fn_name not in ['griewank','paraboloid']:
-                print("==> ERROR: Requested function ", options.fn_name)
-                print("Only the functions 'griewank' and 'paraboloid' are currently included in the code.")
-                exit()
-        else: # static data path provided
-            print("Path to static data: ", options.data_path)
-            options.fn_name = 'static'
-            options.zoom_ctr = 999.0
-            options.zoom_exp = 999.0
-
         
         if (options.bboxrightbound <= options.bboxleftbound):
             print("Right bound must be larger than left bound")
@@ -535,7 +503,6 @@ if __name__ == '__main__':
         if options.log_base <= 1:
             print("Log base must be > 1.  Default is 2.0.")
             exit()
-        if (options.numtestperdim ** options.dim > 10000) and (options.data_path == None):
         if (options.numtestperdim ** options.dim > 10000) and (options.data_path == None):
             print()
             print("==> WARNING: number of query points = (query pts per dim)^(dim) =",options.numtestperdim ** options.dim,"is very large.")
