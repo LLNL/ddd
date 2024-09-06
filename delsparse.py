@@ -5,12 +5,20 @@ for the Fortran source code follows.
 
 '''
 
+'''This Python code is an automatically generated wrapper
+for Fortran code made by 'fmodpy'. The original documentation
+for the Fortran source code follows.
+
+
+'''
+
 import os
 import ctypes
 import platform
 import numpy
 
 # --------------------------------------------------------------------
+#               CONFIGURATION
 #               CONFIGURATION
 # 
 _verbose = True

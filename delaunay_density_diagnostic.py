@@ -5,7 +5,11 @@
 #   Algorithm XXXX: The Delaunay Density Diagnostic
 #       under review at ACM Transactions on Mathematical Software
 #       (original title: Data-driven geometric scale detection via Delaunay interpolation)
+#   Algorithm XXXX: The Delaunay Density Diagnostic
+#       under review at ACM Transactions on Mathematical Software
+#       (original title: Data-driven geometric scale detection via Delaunay interpolation)
 #   by Andrew Gillette and Eugene Kur
+#   Version 2.0, November 2023
 #   Version 2.0, November 2023
 #
 # For usage information, run:
@@ -28,6 +32,7 @@ import pandas as pd
 # from torch.utils.data.sampler import SubsetRandomSampler
 import numpy as np
 import numpy.ma as ma
+import numpy.ma as ma
 
 from numpy.random import rand, default_rng
 from numpy import arccos, array, degrees, absolute
@@ -45,8 +50,10 @@ from delsparse import delaunaysparsep as dsp
 
 #==================================================================================================#
 # Define the test function 
+# Define the test function 
 #==================================================================================================#
 
+def tf_gwk(X): # Griewank function, arbitrary dimension input
 def tf_gwk(X): # Griewank function, arbitrary dimension input
     X = X.T
     term_1 = (1. / 4000.) * sum(X ** 2)
@@ -55,6 +62,10 @@ def tf_gwk(X): # Griewank function, arbitrary dimension input
         term_2 *= np.cos(x) / np.sqrt(i + 1)
     return 1. + term_1 - term_2
 
+
+def tf_pbd(X): # Paraboloid, arbitrary dimension input
+    X = X.T
+    return (7/20_000) *  ( X[0]**2 + 0.5*(X[1]**2) )
 
 def tf_pbd(X): # Paraboloid, arbitrary dimension input
     X = X.T
@@ -78,6 +89,13 @@ def make_test_data_grid(rng, static_data=False):
     grid_pts = grid_pts.reshape(options.dim, num_samples_per_dim ** options.dim)
     grid_pts = grid_pts.T
 
+    if options.fn_name == 'griewank':
+        outputs_on_grid = tf_gwk(grid_pts)
+    elif options.fn_name == 'paraboloid':
+        outputs_on_grid = tf_pbd(grid_pts)
+    else:
+        print("ERROR: function name not supported.")
+        exit()
     if options.fn_name == 'griewank':
         outputs_on_grid = tf_gwk(grid_pts)
     elif options.fn_name == 'paraboloid':
@@ -113,6 +131,14 @@ def make_random_training_in_box(rng):
     for i in range(options.dim):
         rand_pts_n[:,i] += train_box_shift_vector[i]
 
+
+    if options.fn_name == 'griewank':
+        outputs_on_rand_n = tf_gwk(rand_pts_n)
+    elif options.fn_name == 'paraboloid':
+        outputs_on_rand_n = tf_pbd(rand_pts_n)
+    else:
+        print("ERROR: function name not supported.")
+        exit()
 
     if options.fn_name == 'griewank':
         outputs_on_rand_n = tf_gwk(rand_pts_n)
@@ -221,7 +247,19 @@ def compute_DS_only(data_train_inputs, data_train_outputs, data_test_inputs, dat
                 #   DelaunaySparse is stored as all zeros.  In this case,
                 #   we set grad out to be nans.  Later, we mask for these
                 #   nans when computing the gradient improvement rate. 
+                # in extrapolation cases, the "enclosing simplex" provided by
+                #   DelaunaySparse is stored as all zeros.  In this case,
+                #   we set grad out to be nans.  Later, we mask for these
+                #   nans when computing the gradient improvement rate. 
 
+                simp_out_np = np.array(simp_out[:,j])
+                if np.all((simp_out_np == 0)):
+                    grad_out = np.zeros(options.dim)
+                    grad_out[:] = np.nan
+                else:
+                    matrixA = np.zeros([options.dim+1, options.dim+1])
+                    for i in range(options.dim+1):
+                        matrixA[i] = np.append(unscaled_inputs[:,simp_out[:,j][i]-1], interp_in_n[outputdim][simp_out[:,j][i]-1])
                 simp_out_np = np.array(simp_out[:,j])
                 if np.all((simp_out_np == 0)):
                     grad_out = np.zeros(options.dim)
@@ -232,9 +270,16 @@ def compute_DS_only(data_train_inputs, data_train_outputs, data_test_inputs, dat
                         matrixA[i] = np.append(unscaled_inputs[:,simp_out[:,j][i]-1], interp_in_n[outputdim][simp_out[:,j][i]-1])
 
                     coords = matrixA
+                    coords = matrixA
 
                     G = coords.sum(axis=0) / coords.shape[0]
+                    G = coords.sum(axis=0) / coords.shape[0]
 
+                    # run SVD
+                    u, s, vh = np.linalg.svd(coords - G)
+                    
+                    # unitary normal vector
+                    hyper_sfc_normal = vh[options.dim, :]
                     # run SVD
                     u, s, vh = np.linalg.svd(coords - G)
                     
@@ -245,8 +290,13 @@ def compute_DS_only(data_train_inputs, data_train_outputs, data_test_inputs, dat
                     grad_out = hyper_sfc_normal/hyper_sfc_normal[options.dim]
                     grad_out = -grad_out[:-1]
                 # end if/else for simplex all zero indices
+                    # approx grad as normal scaled by vertical component, times -1
+                    grad_out = hyper_sfc_normal/hyper_sfc_normal[options.dim]
+                    grad_out = -grad_out[:-1]
+                # end if/else for simplex all zero indices
                 grad_est_DS[outputdim][j] = grad_out
             # end loop over output dimns 
+        # end loop over simplices
         # end loop over simplices
     # end if computeGrad
     else:
@@ -291,6 +341,17 @@ def compute_DS_only(data_train_inputs, data_train_outputs, data_test_inputs, dat
                     if (len(indices) > 5): indices = indices[:2] + ('...',) + indices[-2:]
                     print(" %3i"%e,"at","{"+",".join(indices)+"}", end=";")
                 print("] ")
+            if unique_errors == [0,2]: # only extrapolation errors
+                pass
+            else:
+                print(" [Delaunay errors:",end="")
+                for e in unique_errors:
+                    if (e == 0): continue
+                    indices = tuple(str(i) for i in range(len(error_out))
+                                    if (error_out[i] == e))
+                    if (len(indices) > 5): indices = indices[:2] + ('...',) + indices[-2:]
+                    print(" %3i"%e,"at","{"+",".join(indices)+"}", end=";")
+                print("] ")
         # Reset the errors to simplex of 1s (to be 0) and weights of 0s.
         bad_indices = (error_out > (1 if allow_extrapolation else 0))
         simp_out[:,bad_indices] = 1
@@ -319,6 +380,12 @@ if __name__ == '__main__':
     parser.add_option( "--fn", help="Test function to use.  Version 2.0 of the code supports the Griewank "+
                     "function and paraboloid used in the paper (in any dimension).  " +
                     "Additional functions can be added.  Default 'griewank'.", 
+    parser.add_option( "--staticdatapath", help="Path to static data set from which samples will be drawn. " +
+        "If no path is provided, code uses --fn option to sample data.", 
+        dest="data_path", type=str, default=None)  
+    parser.add_option( "--fn", help="Test function to use.  Version 2.0 of the code supports the Griewank "+
+                    "function and paraboloid used in the paper (in any dimension).  " +
+                    "Additional functions can be added.  Default 'griewank'.", 
         dest="fn_name", type=str, default="griewank")  
     parser.add_option( "--dim", dest="dim", type=int, default=2, 
         help="Dimension of input space.  Default 2.")
@@ -328,6 +395,8 @@ if __name__ == '__main__':
         help="Max number of samples to draw.  Default = 20,000.")
     parser.add_option("--numtrainpts", dest="numtrainpts", type=int, default=850,
         help="Initial number of samples points (n_0 in the paper).  Default = 850.")
+    parser.add_option("--numtestperdim", dest="numtestperdim", type=int, default=999,
+        help="Number of test points per dimension. Default = 999 (invokes heuristic for static data).")
     parser.add_option("--numtestperdim", dest="numtestperdim", type=int, default=999,
         help="Number of test points per dimension. Default = 999 (invokes heuristic for static data).")
     parser.add_option("--logbase", dest="log_base", type=float, default=1.4641,
@@ -384,7 +453,20 @@ if __name__ == '__main__':
             print()
             print("Query points per dim:", options.numtestperdim)
             print("Total number of query points:", options.numtestperdim ** options.dim)
+        print("Global seed for randomization: ", options.spec_seed)
+        print()
 
+        if options.data_path == None: # use test function to acquire new data
+            print("Function:    ", options.fn_name)
+            print("Dimension:   ", options.dim)
+            print()
+            print("Query points per dim:", options.numtestperdim)
+            print("Total number of query points:", options.numtestperdim ** options.dim)
+
+            # Set bounding box left/right bounds based on zoom center, zoom exponent, and scale factor qpdf
+            if (options.zoom_ctr != 999 and options.zoom_exp != 999):
+                options.bboxleftbound  = np.round(options.zoom_ctr - (10 ** (options.zoom_exp))/options.tb_scale,2)
+                options.bboxrightbound = np.round(options.zoom_ctr + (10 ** (options.zoom_exp))/options.tb_scale,2)
             # Set bounding box left/right bounds based on zoom center, zoom exponent, and scale factor qpdf
             if (options.zoom_ctr != 999 and options.zoom_exp != 999):
                 options.bboxleftbound  = np.round(options.zoom_ctr - (10 ** (options.zoom_exp))/options.tb_scale,2)
@@ -395,6 +477,32 @@ if __name__ == '__main__':
             interval_width = options.bboxrightbound - options.bboxleftbound
             options.queryleftbound  = options.bboxleftbound  + tg_scale_fac * interval_width
             options.queryrightbound = options.bboxrightbound - tg_scale_fac * interval_width
+            # Set query lattice left/right bounds based on bounding box bounds and scale factor qpdf
+            tg_scale_fac = (1.0-options.tb_scale)/2
+            interval_width = options.bboxrightbound - options.bboxleftbound
+            options.queryleftbound  = options.bboxleftbound  + tg_scale_fac * interval_width
+            options.queryrightbound = options.bboxrightbound - tg_scale_fac * interval_width
+
+            print("Query point bounds in each dim: ", "[", options.queryleftbound, ", ", options.queryrightbound, "]")
+            print("Query points dimension fraction (qpdf): ", options.tb_scale)
+            print("Bounding box bounds in each dim: ", "[", options.bboxleftbound, ", ", options.bboxrightbound, "]")
+            print()
+            print("Initial sample size:", options.numtrainpts)
+            print("Maximum sample size:", options.max_samp)
+            print("Upsampling factor b: ", options.log_base)
+            print()
+            print("Using gradients? : ", options.computeGrad)
+            print("Extrapolation threshold: ", options.extrap_thresh)
+            # print("Output cor : ", options.out_cor)
+            if options.fn_name not in ['griewank','paraboloid']:
+                print("==> ERROR: Requested function ", options.fn_name)
+                print("Only the functions 'griewank' and 'paraboloid' are currently included in the code.")
+                exit()
+        else: # static data path provided
+            print("Path to static data: ", options.data_path)
+            options.fn_name = 'static'
+            options.zoom_ctr = 999.0
+            options.zoom_exp = 999.0
 
             print("Query point bounds in each dim: ", "[", options.queryleftbound, ", ", options.queryrightbound, "]")
             print("Query points dimension fraction (qpdf): ", options.tb_scale)
@@ -428,7 +536,11 @@ if __name__ == '__main__':
             print("Log base must be > 1.  Default is 2.0.")
             exit()
         if (options.numtestperdim ** options.dim > 10000) and (options.data_path == None):
+        if (options.numtestperdim ** options.dim > 10000) and (options.data_path == None):
             print()
+            print("==> WARNING: number of query points = (query pts per dim)^(dim) =",options.numtestperdim ** options.dim,"is very large.")
+            print("Exiting.")
+            exit()
             print("==> WARNING: number of query points = (query pts per dim)^(dim) =",options.numtestperdim ** options.dim,"is very large.")
             print("Exiting.")
             exit()
@@ -436,6 +548,9 @@ if __name__ == '__main__':
             print()
             print("==> Set extrapolation threshold in [0,0.5]")
             exit()
+        if (options.min_pctile < 0 or options.min_pctile > 49) and options.min_pctile != 999:
+            print()
+            print("==> Minimum percentile for static data must be in [0,49]")
         if (options.min_pctile < 0 or options.min_pctile > 49) and options.min_pctile != 999:
             print()
             print("==> Minimum percentile for static data must be in [0,49]")
@@ -684,11 +799,16 @@ if __name__ == '__main__':
     # print("For output coordinate ", out_coord,": ")
     print("===  results for", options.fn_name, "dim", options.dim, "seed", options.spec_seed, " ===")
     print("==============================================")
+    print("==============================================")
+    # print("For output coordinate ", out_coord,": ")
+    print("===  results for", options.fn_name, "dim", options.dim, "seed", options.spec_seed, " ===")
+    print("==============================================")
     print("samples | density | prop extrap | MSD diff | MSD rate | grad diff | grad rate | analytic diff | analytic rate ") 
     print("")
 
     prev_error = 999999
     prev_vals_at_test = []
+    prev_extrap_indices = []
     prev_extrap_indices = []
     prev_diff = 999999
 
@@ -724,6 +844,7 @@ if __name__ == '__main__':
 
     quitloop = False
     print_extrap_warning = False
+    print_extrap_warning = False
 
     for i in range(options.it_max): # i = number of "refinements" of interpolant
 
@@ -737,6 +858,32 @@ if __name__ == '__main__':
         # print('====> proportion extrapolated = %1.2f' % prop_extrap_iterate)
         density_of_sample = all_pts_in.shape[0] ** (1/options.dim)
 
+        # Make mask for extrapolation points for current and prev interpolation values
+        #   mask according to previous iteration, 
+        #   whose extrap pts are a superset of extrap pts in current iteration
+        #   (This computation is irrelevant in the case i=0)
+
+        if i==0:
+            interp_out_int_only = interp_out_n
+            prev_vals_int_only = prev_vals_at_test
+        else:
+            mask_extrap = np.zeros_like(interp_out_n, dtype=int)
+            mask_extrap[:,prev_extrap_indices] = 1
+            interp_out_int_only = ma.masked_array(interp_out_n, mask_extrap)
+            prev_vals_int_only  = ma.masked_array(prev_vals_at_test, mask_extrap)
+
+
+        if options.data_path == None: # use test function to acquire new data 
+            # for analytical functions, we can compute the "actual" rate of convergence, for reference
+            ds_vs_actual_at_test = np.sqrt(((interp_out_n[out_coord,:]-actual_test_vals[out_coord,:]) ** 2).mean())
+            if (i == 0): 
+                error_rate = 0
+            else:
+                error_rate =  (np.log(prev_error/ds_vs_actual_at_test))/np.log(options.log_base)
+        else: # have static data; actual_test_vals = [] which causes an error below
+            actual_test_vals = np.zeros_like(interp_out_n)
+            ds_vs_actual_at_test = 0
+            error_rate = 0
         # Make mask for extrapolation points for current and prev interpolation values
         #   mask according to previous iteration, 
         #   whose extrap pts are a superset of extrap pts in current iteration
@@ -783,6 +930,11 @@ if __name__ == '__main__':
                 temp = grad_est_DS - grad_prev_vals_at_test
                 temp = np.ma.array(temp, mask=np.isnan(temp))
                 grad_new_vs_prev_at_test = np.linalg.norm(temp.compressed())
+                ## grad_est_DS may have nans as a flag for extrapolation (look for grad_out[:] = np.nan above)
+                ## so we mask for nans, compress to remove nans, and then compute norm
+                temp = grad_est_DS - grad_prev_vals_at_test
+                temp = np.ma.array(temp, mask=np.isnan(temp))
+                grad_new_vs_prev_at_test = np.linalg.norm(temp.compressed())
                 grad_diff_rate = 0
                 grad_prev_diff = grad_new_vs_prev_at_test
         else: # i > 1
@@ -791,6 +943,15 @@ if __name__ == '__main__':
             diff_rate = np.log(prev_diff/new_vs_prev_at_test)/np.log(options.log_base) 
             prev_diff = new_vs_prev_at_test
             if (options.computeGrad):
+                ## grad_est_DS may have nans as a flag for extrapolation (look for grad_out[:] = np.nan above)
+                ## so we mask for nans, compress to remove nans, and then compute norm
+                temp = grad_est_DS - grad_prev_vals_at_test
+                temp = np.ma.array(temp, mask=np.isnan(temp))
+                grad_new_vs_prev_at_test = np.linalg.norm(temp.compressed())
+
+                ## original line - does not check for nans:
+                ## grad_new_vs_prev_at_test = np.linalg.norm(grad_est_DS - grad_prev_vals_at_test)
+                
                 ## grad_est_DS may have nans as a flag for extrapolation (look for grad_out[:] = np.nan above)
                 ## so we mask for nans, compress to remove nans, and then compute norm
                 temp = grad_est_DS - grad_prev_vals_at_test
@@ -809,6 +970,8 @@ if __name__ == '__main__':
 
         if (i == 0):
             print(("% 6i & %3.2f & %1.2f & -- & -- & -- & -- & %5.5f & -- \\\\") % (all_pts_in.shape[0], density_of_sample,  prop_extrap_iterate, ds_vs_actual_at_test), flush=True)
+            if prop_extrap_iterate > 0:
+                print_extrap_warning = True
             if prop_extrap_iterate > 0:
                 print_extrap_warning = True
         elif (i == 1):
@@ -841,6 +1004,7 @@ if __name__ == '__main__':
         prev_error = ds_vs_actual_at_test
         prev_vals_at_test = interp_out_n
         prev_extrap_indices = extrap_indices
+        prev_extrap_indices = extrap_indices
         if (options.computeGrad):
             grad_prev_vals_at_test = grad_est_DS
 
@@ -859,6 +1023,7 @@ if __name__ == '__main__':
         if (total_samples_so_far[i] + options.numtrainpts > options.max_samp):
             print("")
             print("==> Next step would go over ", options.max_samp, " samples; breaking loop.")
+            print("==> Next step would go over ", options.max_samp, " samples; breaking loop.")
             # print("====>    ALSO: setting numtrainpts to 1 to avoid generating unused points ")
             options.numtrainpts = 1
             quitloop = True
@@ -866,6 +1031,18 @@ if __name__ == '__main__':
                 print("====> WARNING: Extrapolation occured in some cases - see prop extrap column above.")
                 print("====>          If the proportion of extrapoation does not go to zero quickly in most")
                 print("====>          trials, increase the value of --minpctile closer to 50.")
+            if print_extrap_warning:
+                print("====> WARNING: Extrapolation occured in some cases - see prop extrap column above.")
+                print("====>          If the proportion of extrapoation does not go to zero quickly in most")
+                print("====>          trials, increase the value of --minpctile closer to 50.")
+
+        if options.data_path == None: # use test function to acquire new data 
+            new_sample_inputs, new_sample_outputs = make_random_training_in_box(rng)
+        else: # have static data set
+            start = int(total_samples_so_far[i])                        # index to start next sample batch
+            stop  = int(total_samples_so_far[i]) + options.numtrainpts  # index to end   next sample batch
+            new_sample_inputs  = full_dataset.iloc[start:stop, 0:options.dim]
+            new_sample_outputs = full_dataset.iloc[start:stop,-1:] # NOTE: check selection of output coord
 
         if options.data_path == None: # use test function to acquire new data 
             new_sample_inputs, new_sample_outputs = make_random_training_in_box(rng)
@@ -909,5 +1086,6 @@ if __name__ == '__main__':
     
     # print("====> final all_pts_out shape was ", all_pts_out.shape)
     # print("===> done with output coord ", out_coord)
+    print("==> Results saved in ", outfname)
     print("==> Results saved in ", outfname)
 
