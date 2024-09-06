@@ -9,8 +9,7 @@
 #       under review at ACM Transactions on Mathematical Software
 #       (original title: Data-driven geometric scale detection via Delaunay interpolation)
 #   by Andrew Gillette and Eugene Kur
-#   Version 2.0, November 2023
-#   Version 2.0, November 2023
+#   Version 2.1, September 2024
 #
 # For usage information, run:
 # python delaunay_density_diagnostic.py --help

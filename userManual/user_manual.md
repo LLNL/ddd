@@ -1,5 +1,6 @@
-Delaunay Density Diagnostic
+Delaunay Density Diagnostic User Manual
 ----------------
+
    Version 2.1, September 2024.
 
    This code implements algorithms described in:\
@@ -8,6 +9,49 @@ Delaunay Density Diagnostic
    original title: ``Data-driven geometric scale detection via Delaunay interpolation''
    Andrew Gillette and Eugene Kur, 2022 \
    https://arxiv.org/abs/2203.05685
+
+Authors
+----------------
+The Delaunay density diagnostic code was created by Andrew Gillette, gillette7@llnl.gov, with input from Eugene Kur, kur1@llnl.gov.
+
+
+Overview
+-----------------
+
+The Delaunay Density Diagnostic code is a tool to assess a function with *d* numerical inputs and a single numerical output, for *d* in the range 2-10.  
+The user provides either a static dataset of input-output pairs or access to a function that can be evaluated on inputs within a user-provided domain. The diagnostic then returns "rate estimates" for various degrees sampling densities and saves a figure.
+
+High level takeaway: 
+- If the sampling density *is* sufficient to recover geometric features present in the function, the rate will be close to the *dotted green line* in the figure.
+- If the sampling density is **not** suffficinet to distinguish the geometric features from random noise, the rate will be close to the *dashed red line* in the figure.
+
+
+<!-- ![Diagram of the process](../ddd-figure-griewank-repo.png) -->
+
+<img src="../ddd-figure-griewank-repo.png" alt="Alt text" width="300" height="500">
+<img src="../ddd-figure-static-repo.png" alt="Alt text" width="300" height="500">
+
+The example figures shown above are also included with the repository.   The code in the repository can be used to generate these exact figures.
+
+Follow the steps described in Usage below to generate the figures.  Then run
+   ~~~~
+   python delaunay_density_diagnostic.py --help
+   ~~~~
+to read about the command line options.  The paper linked at the top of this user manual describes the algorithm and case studies in detail.
+
+
+
+Requirements
+-----------------
+
+python>=3.7
+
+numpy>=1.21.5 
+
+pandas>=1.3.5
+
+matplotlib>=3.5.3
+
 
 
 Usage
@@ -53,39 +97,6 @@ Warning: Rank mismatch between actual argument at (1) and actual argument at (2)
 ~~~~
 This warning is issued by the `slatec` library that is included with the DELAUNAYSPARSE source code and is not easily suppressed.  However, this warning is only due to a change in Fortran conventions since the original publication of TOMS 1012 and does not cause any issues in regards to the results.
 
-Authors
-----------------
-The Delaunay density diagnostic code was created by Andrew Gillette, gillette7@llnl.gov, with input from Eugene Kur, kur1@llnl.gov.
-
-Citation information
-----------------
-If you are referring to this code in a publication, please cite the following paper:
-
-Andrew Gillette and Eugene Kur.  *Data-driven geometric scale detection via Delaunay interpolation*.  Submitted.  2022.  LLNL-JRNL-832470.
-
-~~~~
-@article{GK2022,
-  author = Gillette, Andrew and Kur, Eugene},
-  title = {Data-driven geometric scale detection via Delaunay interpolation},
-  journal = {Submitted. Preprint at arXiv:2203.05685},
-  year = {2022},
-}
-~~~~
-
-If you wish to cite the code specifically, please use:
-
-~~~~
-@misc{ doecode_72093,
-title = {Delaunay density diagnostic},
-author = {Gillette, Andrew K.},
-url = {https://doi.org/10.11578/dc.20220324.3},
-howpublished = {[Computer Software] \url{https://doi.org/10.11578/dc.20220324.3}},
-year = {2022},
-month = {mar}
-}
-~~~~
-
-The DOI for this repository is:  https://doi.org/10.11578/dc.20220324.3
 
 
 License
